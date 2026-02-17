@@ -1,8 +1,5 @@
-# Give logged-in user access and audio group access to the Arctis wireless dongle
-# Vendor/Product IDs for your device
-ATTRS{idVendor}=="1038", ATTRS{idProduct}=="2202", \
-    MODE="0660", GROUP="audio", TAG+="uaccess"
+# Arctis wireless dongle — permanent access via audio group
+ATTRS{idVendor}=="1038", ATTRS{idProduct}=="2202", MODE="0660", GROUP="audio"
 
-# Also adjust hidraw nodes (some systems expose hidraw* instead of direct USB nodes)
-KERNEL=="hidraw*", ATTRS{idVendor}=="1038", ATTRS{idProduct}=="2202", \
-    MODE="0660", GROUP="audio", TAG+="uaccess"
+KERNEL=="hidraw*", ATTRS{idVendor}=="1038", ATTRS{idProduct}=="2202", MODE="0660", GROUP="audio"
+
