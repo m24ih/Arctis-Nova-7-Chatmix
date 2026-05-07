@@ -1,6 +1,6 @@
 # Arctis Nova 7+ Wireless ChatMix
 
-Lightweight helper that creates two PipeWire virtual sinks (Arctis_Game and Arctis_Chat), links them to your SteelSeries Arctis Nova 7/7+ wireless dongle, and exposes the headset's hardware ChatMix HID controls to set volumes for each virtual sink. The program watches for the dongle being unplugged and will automatically reconnect, relink the virtual sinks and move existing audio streams so playback continues without restarting apps.
+Lightweight helper that creates two PipeWire virtual sinks (Arctis_Game and Arctis_Chat), links them to your SteelSeries Arctis Nova 7 wireless dongle, and exposes the headset's hardware ChatMix HID controls to set volumes for each virtual sink. The program watches for the dongle being unplugged and will automatically reconnect, relink the virtual sinks and move existing audio streams so playback continues without restarting apps.
 
 This repository contains:
 - Rust implementation of the controller (`src/main.rs`)
@@ -10,7 +10,14 @@ This repository contains:
 Supported (tested) environment:
 - Linux with PipeWire (pactl, pw-link / pw-cli available)
 - libusb for HID reads
-- The SteelSeries Arctis Nova 7 / 7+ dongle (vendor: 0x1038, product: 0x2202)
+- The SteelSeries Arctis Nova 7 dongle (vendor: 0x1038)
+  - Arctis Nova 7 (0x2202)
+  - Arctis Nova 7 Gen 2 (Feb 2026 update) (0x22A1)
+  - Arctis Nova 7 Wireless Gen 2 (0x227e)
+  - Arctis Nova 7x (0x2206)
+  - Arctis Nova 7x v2 (0x2258, 0x229e)
+  - Arctis Nova 7 Diablo IV (0x223a, 0x22a9)
+  - Arctis Nova 7 WoW Edition (0x227a)
 
 Features
 - Creates two virtual sinks:

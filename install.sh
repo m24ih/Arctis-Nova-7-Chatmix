@@ -7,10 +7,10 @@ set -euo pipefail
 
 # Defaults
 BINARY="./arctis_chatmix"
-MODE="user"            # user or system
-INSTALL_UDEV="yes"     # yes/no
-ENABLE_SERVICE="yes"   # yes/no
-ENABLE_LINGER="no"     # yes/no (only relevant for user mode)
+MODE="user"          # user or system
+INSTALL_UDEV="yes"   # yes/no
+ENABLE_SERVICE="yes" # yes/no
+ENABLE_LINGER="no"   # yes/no (only relevant for user mode)
 
 print_help() {
   cat <<'USAGE'
@@ -31,13 +31,40 @@ USAGE
 # Parse args
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --binary) shift; BINARY="$1"; shift;;
-    --mode) shift; MODE="$1"; shift;;
-    --udev) shift; INSTALL_UDEV="$1"; shift;;
-    --enable-service) shift; ENABLE_SERVICE="$1"; shift;;
-    --enable-linger) shift; ENABLE_LINGER="$1"; shift;;
-    -h|--help) print_help; exit 0;;
-    *) echo "Unknown argument: $1"; exit 2;;
+  --binary)
+    shift
+    BINARY="$1"
+    shift
+    ;;
+  --mode)
+    shift
+    MODE="$1"
+    shift
+    ;;
+  --udev)
+    shifthttps://github.com/Lairizzle/Arctis-Nova-7-Wireless-Chatmix/pull/1/conflict?name=install.sh&ancestor_oid=704fb711a5b885c0de9ecb539a3573ec0bcb25cd&base_oid=4d1b10c4ea5672ead3d76bd2ea2b9ca493cc26ce&head_oid=eed497195f827b94188c4fbf67e3fdf564bc9aa6
+    INSTALL_UDEV="$1"
+    shift
+    ;;
+  --enable-service)
+    shift
+    ENABLE_SERVICE="$1"
+    shift
+    ;;
+  --enable-linger)
+    shift
+    ENABLE_LINGER="$1"
+    shift
+    ;;
+  -h | --help)
+    print_help
+    exit 0
+    ;;
+  *)
+    echo "Unknown argument: $1"
+    print_help
+    exit 2
+    ;;
   esac
 done
 
@@ -47,9 +74,15 @@ ask_yes_no() {
     read -r -p "$prompt [$default] " reply || exit 1
     reply="${reply:-$default}"
     case "${reply,,}" in
-      y|yes) echo yes; return;;
-      n|no) echo no; return;;
-      *) echo "Please answer yes or no.";;
+    y | yes)
+      echo "yes"
+      return 0
+      ;;
+    n | no)
+      echo "no"
+      return 0
+      ;;
+    *) echo "Please answer yes or no (y/n)." ;;
     esac
   done
 }
@@ -100,15 +133,17 @@ install_user() {
   mkdir -p "$USER_BIN_DIR" "$USER_UNIT_DIR"
   install -m 755 "$BINARY" "$USER_BIN_DIR/arctis_chatmix"
 
-  cat >"$USER_UNIT_DIR/$SERVICE_NAME" <<'UNIT'
+  mkdir -p "${USER_UNIT_DIR}"
+  cat >"${USER_UNIT_DIR}/${SERVICE_NAME}" <<'UNIT'
 [Unit]
-Description=Arctis 7+ ChatMix (virtual-sink mixer)
+Description=Arctis Nova 7 ChatMix (virtual-sink mixer)
 Wants=pipewire.service
 After=pipewire.service
 
 [Service]
 ExecStart=%h/.local/bin/arctis_chatmix
 Environment=ARCTIS_SIDETONE_DISABLE=1
+Environment=RUST_LOG=info
 Restart=on-failure
 RestartSec=5
 
@@ -124,18 +159,48 @@ UNIT
 }
 
 install_system() {
-  [[ $EUID -ne 0 ]] && sudo install -m 755 "$BINARY" "$SYSTEM_BIN_DIR/arctis_chatmix" \
-                     || install -m 755 "$BINARY" "$SYSTEM_BIN_DIR/arctis_chatmix"
+  echo "Installing system-wide (requires sudo)..."
+  if [[ $EUID -ne 0 ]]; then
+    sudo install -m 755 "${BINARY}" "${SYSTEM_BIN_DIR}/arctis_chatmix"
+  else
+    install -m 755 "${BINARY}" "${SYSTEM_BIN_DIR}/arctis_chatmix"
+  fi
+  echo "Binary installed to ${SYSTEM_BIN_DIR}/arctis_chatmix"
 
-  cat <<'UNIT' | ([[ $EUID -ne 0 ]] && sudo tee "$SYSTEM_UNIT_DIR/$SERVICE_NAME" >/dev/null || tee "$SYSTEM_UNIT_DIR/$SERVICE_NAME" >/dev/null)
+  # write systemd unit
+  if [[ $EUID -ne 0 ]]; then
+    sudo tee "${SYSTEM_UNIT_DIR}/${SERVICE_NAME}" >/dev/null <<'UNIT'
 [Unit]
-Description=Arctis 7+ ChatMix (virtual-sink mixer)
+Description=Arctis Nova 7 ChatMix (virtual-sink mixer)
+Wants=pipewire.service
+After=pipewire.service
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/arctis_chatmix
+Environment=ARCTIS_SIDETONE_DISABLE=1
+Environment=RUST_LOG=info
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+UNIT
+    sudo systemctl daemon-reload
+    if [[ "${ENABLE_SERVICE}" == "yes" ]]; then
+      sudo systemctl enable --now arctis_chatmix.service
+    fi
+  else
+    tee "${SYSTEM_UNIT_DIR}/${SERVICE_NAME}" >/dev/null <<'UNIT'
+[Unit]
+Description=Arctis Nova 7 ChatMix (virtual-sink mixer)
 Wants=pipewire.service
 After=pipewire.service
 
 [Service]
 ExecStart=/usr/local/bin/arctis_chatmix
 Environment=ARCTIS_SIDETONE_DISABLE=1
+Environment=RUST_LOG=info
 Restart=on-failure
 RestartSec=5
 
@@ -149,14 +214,39 @@ UNIT
 }
 
 install_udev() {
-  [[ "$INSTALL_UDEV" != "yes" ]] && return
-  cat <<'RULES' | ([[ $EUID -ne 0 ]] && sudo tee "$UDEV_RULE_PATH" >/dev/null || tee "$UDEV_RULE_PATH" >/dev/null)
-ATTRS{idVendor}=="1038", ATTRS{idProduct}=="2202", MODE="0660", GROUP="audio"
-KERNEL=="hidraw*", ATTRS{idVendor}=="1038", ATTRS{idProduct}=="2202", MODE="0660", GROUP="audio"
-RULES
+  if [[ "${INSTALL_UDEV}" != "yes" ]]; then
+    echo "Skipping udev rule install (--udev no)"
+    return
+  fi
 
-  [[ $EUID -ne 0 ]] && sudo udevadm control --reload && sudo udevadm trigger \
-                     || (udevadm control --reload && udevadm trigger)
+  echo "Installing udev rule (requires sudo)..."
+
+  # Supported Product IDs
+  PIDS=("2202" "22a1" "227e" "2206" "2258" "229e" "223a" "22a9" "227a")
+
+  UDEV_CONTENT=""
+  for pid in "${PIDS[@]}"; do
+    UDEV_CONTENT+='ATTRS{idVendor}=="1038", ATTRS{idProduct}=="'"$pid"'", MODE="0660", GROUP="audio", TAG+="uaccess"
+KERNEL=="hidraw*", ATTRS{idVendor}=="1038", ATTRS{idProduct}=="'"$pid"'", MODE="0660", GROUP="audio", TAG+="uaccess"
+'
+  done
+
+  if [[ $EUID -ne 0 ]]; then
+    echo "$UDEV_CONTENT" | sudo tee "${UDEV_RULE_PATH}" >/dev/null
+    sudo udevadm control --reload
+    for pid in "${PIDS[@]}"; do
+        sudo udevadm trigger --subsystem-match=usb --attr-match=idVendor=1038 --attr-match=idProduct="$pid" || true
+    done
+  else
+    echo "$UDEV_CONTENT" >"${UDEV_RULE_PATH}"
+    udevadm control --reload
+    for pid in "${PIDS[@]}"; do
+        udevadm trigger --subsystem-match=usb --attr-match=idVendor=1038 --attr-match=idProduct="$pid" || true
+    done
+  fi
+
+  echo "udev rule installed to ${UDEV_RULE_PATH}"
+  echo "Make sure your user is in the 'audio' group (sudo usermod -aG audio <user>) and re-login."
 }
 
 echo "== arctis_chatmix installer =="

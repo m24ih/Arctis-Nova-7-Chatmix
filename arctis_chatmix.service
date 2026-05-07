@@ -1,5 +1,6 @@
 [Unit]
-Description=Arctis 7+ ChatMix (virtual-sink mixer)
+Description=Arctis Nova 7 ChatMix (virtual-sink mixer)
+Wants=pipewire.service
 After=pipewire.service
 Wants=pipewire.service
 
