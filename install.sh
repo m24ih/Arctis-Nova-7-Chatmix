@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Interactive installer for arctis_chatmix
 # Usage:
-#   ./install.sh             -> interactive mode
+#   ./install.sh
 #   ./install.sh --binary ./arctis_chatmix --mode user --udev yes --enable-service yes
 set -euo pipefail
 
@@ -25,17 +25,10 @@ Options (non-interactive):
   --enable-service yes|no Enable and start the service immediately (default: yes)
   --enable-linger yes|no  Enable systemd linger for the user (only relevant for --mode user; default: no)
   -h, --help              Show this help and exit
-
-Examples:
-  # Interactive:
-  ./install.sh
-
-  # Non-interactive:
-  ./install.sh --binary ./arctis_chatmix --mode user --udev yes --enable-service yes
 USAGE
 }
 
-# Parse args (simple parser)
+# Parse args
 while [[ $# -gt 0 ]]; do
   case "$1" in
   --binary)
@@ -49,7 +42,7 @@ while [[ $# -gt 0 ]]; do
     shift
     ;;
   --udev)
-    shift
+    shifthttps://github.com/Lairizzle/Arctis-Nova-7-Wireless-Chatmix/pull/1/conflict?name=install.sh&ancestor_oid=704fb711a5b885c0de9ecb539a3573ec0bcb25cd&base_oid=4d1b10c4ea5672ead3d76bd2ea2b9ca493cc26ce&head_oid=eed497195f827b94188c4fbf67e3fdf564bc9aa6
     INSTALL_UDEV="$1"
     shift
     ;;
@@ -75,11 +68,8 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-# helper: yes/no prompt with default
 ask_yes_no() {
-  local prompt="$1"
-  local default="$2"
-  local reply
+  local prompt="$1" default="$2" reply
   while true; do
     read -r -p "$prompt [$default] " reply || exit 1
     reply="${reply:-$default}"
@@ -97,60 +87,51 @@ ask_yes_no() {
   done
 }
 
-# If running fully non-interactive (no TTY) then rely on supplied flags only.
 IS_TTY=1
-if [[ ! -t 0 ]]; then
-  IS_TTY=0
-fi
+[[ ! -t 0 ]] && IS_TTY=0
 
-# Interactive prompts (only when TTY)
 if [[ $IS_TTY -eq 1 ]]; then
   echo "Arctis ChatMix installer (interactive)"
-  read -r -p "Path to binary [${BINARY}]: " input_bin || exit 1
-  BINARY="${input_bin:-$BINARY}"
 
-  while [[ ! -f "$BINARY" ]]; do
-    echo "Binary not found at '$BINARY'."
-    read -r -p "Enter valid path to binary (or press Ctrl+C to abort): " BINARY || exit 1
-  done
-  echo "Using binary: $BINARY"
+  read -r -p "Path to binary [$BINARY]: " in || exit 1
+  BINARY="${in:-$BINARY}"
+  [[ ! -f "$BINARY" ]] && echo "Binary not found." && exit 2
 
-  read -r -p "Install mode - user or system [${MODE}]: " input_mode || exit 1
-  MODE="${input_mode:-$MODE}"
-  if [[ "$MODE" != "user" && "$MODE" != "system" ]]; then
-    echo "Invalid mode. Choose 'user' or 'system'."
-    exit 2
-  fi
+  read -r -p "Install mode - user or system [$MODE]: " in || exit 1
+  MODE="${in:-$MODE}"
 
-  INSTALL_UDEV=$(ask_yes_no "Install udev rule to allow non-root access to the dongle?" "$INSTALL_UDEV")
-  ENABLE_SERVICE=$(ask_yes_no "Enable & start the service now?" "$ENABLE_SERVICE")
+  INSTALL_UDEV=$(ask_yes_no "Install udev rule?" "$INSTALL_UDEV")
+  ENABLE_SERVICE=$(ask_yes_no "Enable & start service now?" "$ENABLE_SERVICE")
 
-  if [[ "$MODE" == "user" ]]; then
-    ENABLE_LINGER=$(ask_yes_no "Enable lingering so service runs without active session? (loginctl enable-linger)" "$ENABLE_LINGER")
-  fi
-else
-  # non-interactive: validate provided binary path
-  if [[ ! -f "$BINARY" ]]; then
-    echo "ERROR: binary not found at '$BINARY' (non-interactive mode)."
-    exit 2
-  fi
+  [[ "$MODE" == "user" ]] &&
+    ENABLE_LINGER=$(ask_yes_no "Enable linger (loginctl enable-linger)?" "$ENABLE_LINGER")
 fi
 
-# paths
 SYSTEM_BIN_DIR="/usr/local/bin"
-USER_BIN_DIR="${HOME}/.local/bin"
+USER_BIN_DIR="$HOME/.local/bin"
 SERVICE_NAME="arctis_chatmix.service"
-USER_UNIT_DIR="${HOME}/.config/systemd/user"
+USER_UNIT_DIR="$HOME/.config/systemd/user"
 SYSTEM_UNIT_DIR="/etc/systemd/system"
 UDEV_RULE_PATH="/etc/udev/rules.d/99-arctis.rules"
 
-install_user() {
-  echo "Installing for current user..."
+ensure_audio_group() {
+  getent group audio >/dev/null && return
+  echo "Creating audio group (requires sudo)..."
+  [[ $EUID -ne 0 ]] && sudo groupadd -r audio || groupadd -r audio
+}
 
-  mkdir -p "${USER_BIN_DIR}"
-  cp -f "${BINARY}" "${USER_BIN_DIR}/arctis_chatmix"
-  chmod 755 "${USER_BIN_DIR}/arctis_chatmix"
-  echo "Binary installed to ${USER_BIN_DIR}/arctis_chatmix"
+add_user_to_audio_group() {
+  local u
+  u="$(id -un)"
+  id -nG "$u" | grep -qw audio && return
+  echo "Adding user '$u' to audio group (requires sudo)..."
+  [[ $EUID -ne 0 ]] && sudo usermod -aG audio "$u" || usermod -aG audio "$u"
+  echo "IMPORTANT: You must log out and log back in (or reboot)."
+}
+
+install_user() {
+  mkdir -p "$USER_BIN_DIR" "$USER_UNIT_DIR"
+  install -m 755 "$BINARY" "$USER_BIN_DIR/arctis_chatmix"
 
   mkdir -p "${USER_UNIT_DIR}"
   cat >"${USER_UNIT_DIR}/${SERVICE_NAME}" <<'UNIT'
@@ -160,7 +141,6 @@ Wants=pipewire.service
 After=pipewire.service
 
 [Service]
-Type=simple
 ExecStart=%h/.local/bin/arctis_chatmix
 Environment=ARCTIS_SIDETONE_DISABLE=1
 Environment=RUST_LOG=info
@@ -170,33 +150,12 @@ RestartSec=5
 [Install]
 WantedBy=default.target
 UNIT
-  echo "User unit written to ${USER_UNIT_DIR}/${SERVICE_NAME}"
 
-  # reload and enable user service if requested
-  if [[ "${ENABLE_SERVICE}" == "yes" ]]; then
-    if command -v systemctl >/dev/null 2>&1; then
-      echo "Reloading user systemd daemon..."
-      systemctl --user daemon-reload || echo "Warning: systemctl --user daemon-reload failed"
-      echo "Enabling and starting user service..."
-      if ! systemctl --user enable --now arctis_chatmix.service; then
-        echo "Warning: Could not enable/start user service in this session."
-        echo "You can enable it manually with: systemctl --user enable --now arctis_chatmix.service"
-      fi
-    else
-      echo "Warning: systemctl not available. Please enable the user service manually."
-    fi
-  fi
+  systemctl --user daemon-reload
+  [[ "$ENABLE_SERVICE" == "yes" ]] && systemctl --user enable --now "$SERVICE_NAME" || true
 
-  if [[ "${ENABLE_LINGER}" == "yes" ]]; then
-    echo "Enabling linger for user (requires sudo)..."
-    if [[ $EUID -ne 0 ]]; then
-      sudo loginctl enable-linger "$(id -un)"
-    else
-      loginctl enable-linger "$(id -un)"
-    fi
-  fi
-
-  echo "User install completed."
+  [[ "$ENABLE_LINGER" == "yes" ]] &&
+    ([[ $EUID -ne 0 ]] && sudo loginctl enable-linger "$(id -un)" || loginctl enable-linger "$(id -un)")
 }
 
 install_system() {
@@ -239,7 +198,6 @@ Wants=pipewire.service
 After=pipewire.service
 
 [Service]
-Type=simple
 ExecStart=/usr/local/bin/arctis_chatmix
 Environment=ARCTIS_SIDETONE_DISABLE=1
 Environment=RUST_LOG=info
@@ -249,13 +207,10 @@ RestartSec=5
 [Install]
 WantedBy=multi-user.target
 UNIT
-    systemctl daemon-reload
-    if [[ "${ENABLE_SERVICE}" == "yes" ]]; then
-      systemctl enable --now arctis_chatmix.service
-    fi
-  fi
 
-  echo "System-wide install completed."
+  [[ $EUID -ne 0 ]] && sudo systemctl daemon-reload || systemctl daemon-reload
+  [[ "$ENABLE_SERVICE" == "yes" ]] &&
+    ([[ $EUID -ne 0 ]] && sudo systemctl enable --now "$SERVICE_NAME" || systemctl enable --now "$SERVICE_NAME")
 }
 
 install_udev() {
@@ -295,38 +250,13 @@ KERNEL=="hidraw*", ATTRS{idVendor}=="1038", ATTRS{idProduct}=="'"$pid"'", MODE="
 }
 
 echo "== arctis_chatmix installer =="
-echo "Mode: ${MODE}"
-echo "Binary: ${BINARY}"
-echo "Install udev rule: ${INSTALL_UDEV}"
-echo "Enable & start service now: ${ENABLE_SERVICE}"
-if [[ "${MODE}" == "user" ]]; then
-  echo "Enable linger: ${ENABLE_LINGER}"
-fi
+[[ $IS_TTY -eq 1 ]] && [[ "$(ask_yes_no "Proceed?" yes)" != "yes" ]] && exit 0
 
-# Confirm (interactive)
-if [[ $IS_TTY -eq 1 ]]; then
-  CONFIRM=$(ask_yes_no "Proceed with installation?" "yes")
-  if [[ "${CONFIRM}" != "yes" ]]; then
-    echo "Aborting."
-    exit 0
-  fi
-fi
-
-# Run installs
-if [[ "${MODE}" == "user" ]]; then
-  install_user
-else
-  install_system
-fi
-
+[[ "$MODE" == "user" ]] && install_user || install_system
+ensure_audio_group
+add_user_to_audio_group
 install_udev
 
-echo "Installation finished."
-if [[ "${MODE}" == "user" ]]; then
-  echo "Check user logs with: journalctl --user -u arctis_chatmix.service -f"
-else
-  echo "Check system logs with: sudo journalctl -u arctis_chatmix.service -f"
-fi
+echo "Installation complete."
+echo "If audio group was modified: LOG OUT and LOG BACK IN."
 
-echo "Done."
-exit 0
