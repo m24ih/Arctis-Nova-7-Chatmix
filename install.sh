@@ -210,7 +210,11 @@ run_uninstall() {
     [[ "$(ask_yes_no "Proceed with uninstall?" yes)" != "yes" ]] && exit 0
   fi
 
-  [[ "$MODE" == "user" ]] && uninstall_user || uninstall_system
+  if [[ "$MODE" == "user" ]]; then
+    uninstall_user
+  else
+    uninstall_system
+  fi
   uninstall_udev
 
   echo ""
@@ -259,7 +263,7 @@ UNIT
   systemctl --user daemon-reload
   [[ "$ENABLE_SERVICE" == "yes" ]] && systemctl --user enable --now "$SERVICE_NAME" || true
   [[ "$ENABLE_LINGER" == "yes" ]] &&
-    ([[ $EUID -ne 0 ]] && sudo loginctl enable-linger "$(id -un)" || loginctl enable-linger "$(id -un)")
+    ([[ $EUID -ne 0 ]] && sudo loginctl enable-linger "$(id -un)" || loginctl enable-linger "$(id -un)") || true
 }
 
 install_system() {
@@ -356,9 +360,13 @@ run_install() {
     [[ "$(ask_yes_no "Proceed?" yes)" != "yes" ]] && exit 0
   fi
 
-  [[ "$MODE" == "user" ]] && install_user || install_system
-  ensure_audio_group
-  add_user_to_audio_group
+  if [[ "$MODE" == "user" ]]; then
+    install_user
+  else
+    install_system
+  fi
+  ensure_audio_group   || echo "[warn] Could not ensure audio group (run manually: sudo groupadd -r audio)"
+  add_user_to_audio_group || echo "[warn] Could not add user to audio group (run manually: sudo usermod -aG audio $(id -un))"
   install_udev
   echo "Installation complete."
   echo "If audio group was modified: LOG OUT and LOG BACK IN."
