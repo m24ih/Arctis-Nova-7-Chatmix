@@ -63,7 +63,7 @@ impl ArctisController {
         info!("Found Physical Sink: {}", arctis_sink);
 
         info!("Cleaning up old virtual sinks (if any)...");
-        // Hata vermemesi için çıktıları yutuyoruz, amaç temizlik.
+        // Suppress output and errors — we just want a clean slate.
         let _ = Command::new("pw-cli")
             .args(&["destroy", "Arctis_Game"])
             .stdout(Stdio::null())
@@ -127,7 +127,7 @@ impl ArctisController {
     }
 
     fn start(&self) -> Result<()> {
-        // 1. Sanal ses cihazlarını oluşturmayı dene
+        // 1. Attempt to create virtual audio sinks
         loop {
             if !self.running.load(Ordering::SeqCst) {
                 return Ok(());
@@ -143,7 +143,7 @@ impl ArctisController {
             }
         }
 
-        // 2. USB bağlantısını ve ChatMix döngüsünü başlat
+        // 2. Start USB connection and ChatMix read loop
         loop {
             if !self.running.load(Ordering::SeqCst) {
                 break;
@@ -181,22 +181,22 @@ impl ArctisController {
                     info!("  • Arctis_Chat -> Chat Audio");
                     info!("{}", "=".repeat(50));
 
-                    // Cihaz yeniden bağlandığında sanal sinkleri tekrar bağla
+                    // Re-link virtual sinks after device reconnect
                     if let Err(e) = self.relink_virtual_sinks_with_retry() {
                         warn!("Failed to relink virtual sinks after reconnect: {}", e);
                     }
 
-                    // Girişleri Game kanalına taşı
+                    // Move active sink inputs to the Game channel
                     if let Err(e) = move_all_inputs_to("Arctis_Game") {
                         warn!("Failed to move existing sink inputs: {}", e);
                     } else {
                         info!("Moved active audio streams to Arctis_Game");
                     }
 
-                    // Okuma döngüsü (Read Loop)
+                    // Read Loop
                     let res = self.read_loop(&mut handle, endpoint);
 
-                    // Arayüzü serbest bırak (opsiyonel, hata verirse önemli değil)
+                    // Release the interface (optional, errors here are non-fatal)
                     let _ = handle.release_interface(interface_num);
 
                     return res;
@@ -228,13 +228,13 @@ impl ArctisController {
                     if len >= 3 && buf[0] == 0x45 {
                         let game_vol = buf[1];
                         let chat_vol = buf[2];
-                        // Ses seviyelerini ayarla
+                        // Apply volume levels
                         set_sink_volume("Arctis_Game", game_vol);
                         set_sink_volume("Arctis_Chat", chat_vol);
                     }
                 }
                 Err(rusb::Error::Timeout) => {
-                    // Timeout normaldir, veri gelmemiş olabilir.
+                    // Timeout is expected — no data received in this interval.
                     consecutive_errors = 0;
                     continue;
                 }
@@ -273,7 +273,7 @@ impl ArctisController {
             match find_arctis_sink() {
                 Ok(arctis_sink) => {
                     info!("Relinking virtual sinks to '{}'", arctis_sink);
-                    // Hataları logla ama akışı kesme
+                    // Log warnings but don't abort the flow
                     if let Err(e) = link_sink_to_device("Arctis_Game", &arctis_sink) {
                         warn!("Link warning (Game): {}", e);
                     }
@@ -281,7 +281,7 @@ impl ArctisController {
                         warn!("Link warning (Chat): {}", e);
                     }
 
-                    // Game'i varsayılan yap
+                    // Set Game sink as the default
                     let _ = Command::new("pactl")
                         .args(&["set-default-sink", "Arctis_Game"])
                         .status();
@@ -301,12 +301,12 @@ impl ArctisController {
 
     fn cleanup(&self) {
         info!("Shutting down...");
-        // Eski varsayılan sink'e dön
+        // Restore the original default sink
         let _ = Command::new("pactl")
             .args(&["set-default-sink", &self.original_default_sink])
             .status();
 
-        // Sanal cihazları temizle
+        // Destroy virtual sink nodes
         let _ = Command::new("pw-cli").args(&["destroy", "Arctis_Game"]).stdout(Stdio::null()).status();
         let _ = Command::new("pw-cli").args(&["destroy", "Arctis_Chat"]).stdout(Stdio::null()).status();
 
@@ -353,7 +353,7 @@ fn find_arctis_sink() -> Result<String> {
 
     for line in sinks.lines() {
         let lower = line.to_lowercase();
-        // "nova" veya "7" ibarelerini arıyoruz
+        // Match on "nova" or "7" in addition to "arctis"
         if lower.contains("arctis") && (lower.contains("7") || lower.contains("nova")) {
             let parts: Vec<&str> = line.split('\t').collect();
             if parts.len() >= 2 {
@@ -388,7 +388,7 @@ fn link_sink_to_device(sink_name: &str, device_name: &str) -> Result<()> {
 
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
-            // Eğer bağlantı zaten varsa (File exists), hata değil başarı say.
+            // If the link already exists, treat it as success rather than an error.
             if stderr.contains("File exists") || stderr.contains("exists") {
                 debug!("Link already exists (skipping): {} -> {}", src, dst);
             } else {
@@ -416,7 +416,7 @@ fn move_all_inputs_to(sink_name: &str) -> Result<()> {
         let cols: Vec<&str> = line.split('\t').collect();
         if !cols.is_empty() {
             if let Ok(index) = cols[0].parse::<u32>() {
-                // Hata alırsak da devam ediyoruz, bazı inputlar taşınamaz olabilir.
+                // Ignore errors — some inputs may not be movable.
                 let _ = Command::new("pactl")
                     .args(&["move-sink-input", &index.to_string(), sink_name])
                     .status();
@@ -428,10 +428,15 @@ fn move_all_inputs_to(sink_name: &str) -> Result<()> {
 
 /* ---------- hidapi sidetone write ---------- */
 fn try_hidapi_sidetone_from_env() {
-    // Sidetone ayarı ortam değişkeninden okunur
+    // Skip sidetone if disabled via ARCTIS_SIDETONE_DISABLE=1
+    if env::var("ARCTIS_SIDETONE_DISABLE").as_deref() == Ok("1") {
+        debug!("Sidetone disabled via ARCTIS_SIDETONE_DISABLE=1, skipping.");
+        return;
+    }
+    // Read sidetone level from environment variable
     if let Ok(v) = env::var("ARCTIS_SIDETONE_PERCENT") {
         if let Ok(num) = v.trim().parse::<u8>() {
-             let _ = hidapi_send_sidetone(num.min(100));
+            let _ = hidapi_send_sidetone(num.min(100));
         }
     }
 }

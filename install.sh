@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
-# Interactive installer for arctis_chatmix
+# Interactive installer/uninstaller for arctis_chatmix
 # Usage:
 #   ./install.sh
 #   ./install.sh --binary ./arctis_chatmix --mode user --udev yes --enable-service yes
+#   ./install.sh --uninstall
+#   ./install.sh --uninstall --mode user --udev yes
 set -euo pipefail
 
 # Defaults
@@ -11,17 +13,19 @@ MODE="user"          # user or system
 INSTALL_UDEV="yes"   # yes/no
 ENABLE_SERVICE="yes" # yes/no
 ENABLE_LINGER="no"   # yes/no (only relevant for user mode)
+UNINSTALL="no"       # yes/no
 
 print_help() {
   cat <<'USAGE'
 Usage: install.sh [OPTIONS]
-Interactive installer for arctis_chatmix.
+Interactive installer/uninstaller for arctis_chatmix.
 Options (non-interactive):
   --binary PATH           Path to the arctis_chatmix binary (default: ./arctis_chatmix)
   --mode user|system      Install as a per-user service (default) or system-wide service
-  --udev yes|no           Install udev rule (default: yes)
+  --udev yes|no           Install/remove udev rule (default: yes)
   --enable-service yes|no Enable and start the service immediately (default: yes)
   --enable-linger yes|no  Enable systemd linger for the user (only relevant for --mode user; default: no)
+  --uninstall             Remove arctis_chatmix (service, binary, and optionally udev rule)
   -h, --help              Show this help and exit
 USAGE
 }
@@ -52,6 +56,10 @@ while [[ $# -gt 0 ]]; do
   --enable-linger)
     shift
     ENABLE_LINGER="$1"
+    shift
+    ;;
+  --uninstall)
+    UNINSTALL="yes"
     shift
     ;;
   -h | --help)
@@ -88,25 +96,126 @@ ask_yes_no() {
 IS_TTY=1
 [[ ! -t 0 ]] && IS_TTY=0
 
-if [[ $IS_TTY -eq 1 ]]; then
-  echo "Arctis ChatMix installer (interactive)"
-  read -r -p "Path to binary [$BINARY]: " in || exit 1
-  BINARY="${in:-$BINARY}"
-  [[ ! -f "$BINARY" ]] && echo "Binary not found." && exit 2
-  read -r -p "Install mode - user or system [$MODE]: " in || exit 1
-  MODE="${in:-$MODE}"
-  INSTALL_UDEV=$(ask_yes_no "Install udev rule?" "$INSTALL_UDEV")
-  ENABLE_SERVICE=$(ask_yes_no "Enable & start service now?" "$ENABLE_SERVICE")
-  [[ "$MODE" == "user" ]] &&
-    ENABLE_LINGER=$(ask_yes_no "Enable linger (loginctl enable-linger)?" "$ENABLE_LINGER")
-fi
-
+# ── Path constants ────────────────────────────────────────────────────────────
 SYSTEM_BIN_DIR="/usr/local/bin"
 USER_BIN_DIR="$HOME/.local/bin"
 SERVICE_NAME="arctis_chatmix.service"
 USER_UNIT_DIR="$HOME/.config/systemd/user"
 SYSTEM_UNIT_DIR="/etc/systemd/system"
 UDEV_RULE_PATH="/etc/udev/rules.d/99-arctis.rules"
+
+# ══════════════════════════════════════════════════════════════════════════════
+# UNINSTALL
+# ══════════════════════════════════════════════════════════════════════════════
+
+uninstall_user() {
+  echo "Stopping and disabling user service..."
+  systemctl --user stop  "$SERVICE_NAME" 2>/dev/null || true
+  systemctl --user disable "$SERVICE_NAME" 2>/dev/null || true
+
+  local unit_file="$USER_UNIT_DIR/$SERVICE_NAME"
+  if [[ -f "$unit_file" ]]; then
+    rm -f "$unit_file"
+    echo "Removed unit: $unit_file"
+  else
+    echo "Unit file not found (already removed?): $unit_file"
+  fi
+
+  systemctl --user daemon-reload
+
+  local bin_file="$USER_BIN_DIR/arctis_chatmix"
+  if [[ -f "$bin_file" ]]; then
+    rm -f "$bin_file"
+    echo "Removed binary: $bin_file"
+  else
+    echo "Binary not found (already removed?): $bin_file"
+  fi
+}
+
+uninstall_system() {
+  echo "Stopping and disabling system service (requires sudo)..."
+  if [[ $EUID -ne 0 ]]; then
+    sudo systemctl stop    "$SERVICE_NAME" 2>/dev/null || true
+    sudo systemctl disable "$SERVICE_NAME" 2>/dev/null || true
+  else
+    systemctl stop    "$SERVICE_NAME" 2>/dev/null || true
+    systemctl disable "$SERVICE_NAME" 2>/dev/null || true
+  fi
+
+  local unit_file="$SYSTEM_UNIT_DIR/$SERVICE_NAME"
+  if [[ -f "$unit_file" ]]; then
+    if [[ $EUID -ne 0 ]]; then
+      sudo rm -f "$unit_file"
+    else
+      rm -f "$unit_file"
+    fi
+    echo "Removed unit: $unit_file"
+  else
+    echo "Unit file not found (already removed?): $unit_file"
+  fi
+
+  if [[ $EUID -ne 0 ]]; then
+    sudo systemctl daemon-reload
+  else
+    systemctl daemon-reload
+  fi
+
+  local bin_file="$SYSTEM_BIN_DIR/arctis_chatmix"
+  if [[ -f "$bin_file" ]]; then
+    if [[ $EUID -ne 0 ]]; then
+      sudo rm -f "$bin_file"
+    else
+      rm -f "$bin_file"
+    fi
+    echo "Removed binary: $bin_file"
+  else
+    echo "Binary not found (already removed?): $bin_file"
+  fi
+}
+
+uninstall_udev() {
+  if [[ "$INSTALL_UDEV" != "yes" ]]; then
+    echo "Skipping udev rule removal (--udev no)"
+    return
+  fi
+  if [[ -f "$UDEV_RULE_PATH" ]]; then
+    echo "Removing udev rule (requires sudo)..."
+    if [[ $EUID -ne 0 ]]; then
+      sudo rm -f "$UDEV_RULE_PATH"
+      sudo udevadm control --reload
+    else
+      rm -f "$UDEV_RULE_PATH"
+      udevadm control --reload
+    fi
+    echo "Removed udev rule: $UDEV_RULE_PATH"
+  else
+    echo "udev rule not found (already removed?): $UDEV_RULE_PATH"
+  fi
+}
+
+run_uninstall() {
+  echo "== arctis_chatmix uninstaller =="
+
+  # Interactive mode: ask questions
+  if [[ $IS_TTY -eq 1 ]]; then
+    read -r -p "Uninstall mode - user or system [$MODE]: " in || exit 1
+    MODE="${in:-$MODE}"
+    INSTALL_UDEV=$(ask_yes_no "Also remove udev rule?" "$INSTALL_UDEV")
+    [[ "$(ask_yes_no "Proceed with uninstall?" yes)" != "yes" ]] && exit 0
+  fi
+
+  [[ "$MODE" == "user" ]] && uninstall_user || uninstall_system
+  uninstall_udev
+
+  echo ""
+  echo "✓ Uninstall complete."
+  echo "  Virtual sinks (Arctis_Game / Arctis_Chat) will disappear"
+  echo "  after your PipeWire session restarts or on next login."
+}
+
+# ══════════════════════════════════════════════════════════════════════════════
+# INSTALL
+# ══════════════════════════════════════════════════════════════════════════════
 
 ensure_audio_group() {
   getent group audio >/dev/null && return
@@ -225,11 +334,33 @@ KERNEL=="hidraw*", ATTRS{idVendor}=="1038", ATTRS{idProduct}=="'"$pid"'", MODE="
   echo "Make sure your user is in the 'audio' group (sudo usermod -aG audio <user>) and re-login."
 }
 
-echo "== arctis_chatmix installer =="
-[[ $IS_TTY -eq 1 ]] && [[ "$(ask_yes_no "Proceed?" yes)" != "yes" ]] && exit 0
-[[ "$MODE" == "user" ]] && install_user || install_system
-ensure_audio_group
-add_user_to_audio_group
-install_udev
-echo "Installation complete."
-echo "If audio group was modified: LOG OUT and LOG BACK IN."
+run_install() {
+  echo "== arctis_chatmix installer =="
+
+  if [[ $IS_TTY -eq 1 ]]; then
+    read -r -p "Path to binary [$BINARY]: " in || exit 1
+    BINARY="${in:-$BINARY}"
+    [[ ! -f "$BINARY" ]] && echo "Binary not found." && exit 2
+    read -r -p "Install mode - user or system [$MODE]: " in || exit 1
+    MODE="${in:-$MODE}"
+    INSTALL_UDEV=$(ask_yes_no "Install udev rule?" "$INSTALL_UDEV")
+    ENABLE_SERVICE=$(ask_yes_no "Enable & start service now?" "$ENABLE_SERVICE")
+    [[ "$MODE" == "user" ]] &&
+      ENABLE_LINGER=$(ask_yes_no "Enable linger (loginctl enable-linger)?" "$ENABLE_LINGER")
+    [[ "$(ask_yes_no "Proceed?" yes)" != "yes" ]] && exit 0
+  fi
+
+  [[ "$MODE" == "user" ]] && install_user || install_system
+  ensure_audio_group
+  add_user_to_audio_group
+  install_udev
+  echo "Installation complete."
+  echo "If audio group was modified: LOG OUT and LOG BACK IN."
+}
+
+# ── Entry point ───────────────────────────────────────────────────────────────
+if [[ "$UNINSTALL" == "yes" ]]; then
+  run_uninstall
+else
+  run_install
+fi

@@ -2,7 +2,6 @@
 Description=Arctis Nova 7 ChatMix (virtual-sink mixer)
 Wants=pipewire.service
 After=pipewire.service
-Wants=pipewire.service
 
 [Service]
 Type=simple
@@ -13,4 +12,3 @@ RestartSec=5
 
 [Install]
 WantedBy=default.target
-
