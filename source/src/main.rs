@@ -428,10 +428,15 @@ fn move_all_inputs_to(sink_name: &str) -> Result<()> {
 
 /* ---------- hidapi sidetone write ---------- */
 fn try_hidapi_sidetone_from_env() {
+    // ARCTIS_SIDETONE_DISABLE=1 ise sidetone gönderme
+    if env::var("ARCTIS_SIDETONE_DISABLE").as_deref() == Ok("1") {
+        debug!("Sidetone disabled via ARCTIS_SIDETONE_DISABLE=1, skipping.");
+        return;
+    }
     // Sidetone ayarı ortam değişkeninden okunur
     if let Ok(v) = env::var("ARCTIS_SIDETONE_PERCENT") {
         if let Ok(num) = v.trim().parse::<u8>() {
-             let _ = hidapi_send_sidetone(num.min(100));
+            let _ = hidapi_send_sidetone(num.min(100));
         }
     }
 }
