@@ -14,6 +14,7 @@ INSTALL_UDEV="yes"   # yes/no
 ENABLE_SERVICE="yes" # yes/no
 ENABLE_LINGER="no"   # yes/no (only relevant for user mode)
 UNINSTALL="no"       # yes/no
+SKIP_CONFIRM="no"    # yes/no — skip all interactive prompts (-y/--yes)
 
 print_help() {
   cat <<'USAGE'
@@ -26,6 +27,7 @@ Options (non-interactive):
   --enable-service yes|no Enable and start the service immediately (default: yes)
   --enable-linger yes|no  Enable systemd linger for the user (only relevant for --mode user; default: no)
   --uninstall             Remove arctis_chatmix (service, binary, and optionally udev rule)
+  -y, --yes               Skip all interactive prompts and use provided/default values
   -h, --help              Show this help and exit
 USAGE
 }
@@ -60,6 +62,10 @@ while [[ $# -gt 0 ]]; do
     ;;
   --uninstall)
     UNINSTALL="yes"
+    shift
+    ;;
+  -y | --yes)
+    SKIP_CONFIRM="yes"
     shift
     ;;
   -h | --help)
@@ -196,8 +202,8 @@ uninstall_udev() {
 run_uninstall() {
   echo "== arctis_chatmix uninstaller =="
 
-  # Interactive mode: ask questions
-  if [[ $IS_TTY -eq 1 ]]; then
+  # Interactive mode: ask questions only when not suppressed by --yes
+  if [[ $IS_TTY -eq 1 && "$SKIP_CONFIRM" != "yes" ]]; then
     read -r -p "Uninstall mode - user or system [$MODE]: " in || exit 1
     MODE="${in:-$MODE}"
     INSTALL_UDEV=$(ask_yes_no "Also remove udev rule?" "$INSTALL_UDEV")
@@ -337,7 +343,7 @@ KERNEL=="hidraw*", ATTRS{idVendor}=="1038", ATTRS{idProduct}=="'"$pid"'", MODE="
 run_install() {
   echo "== arctis_chatmix installer =="
 
-  if [[ $IS_TTY -eq 1 ]]; then
+  if [[ $IS_TTY -eq 1 && "$SKIP_CONFIRM" != "yes" ]]; then
     read -r -p "Path to binary [$BINARY]: " in || exit 1
     BINARY="${in:-$BINARY}"
     [[ ! -f "$BINARY" ]] && echo "Binary not found." && exit 2
