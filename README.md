@@ -1,47 +1,54 @@
 # Arctis Nova 7 ChatMix
 
-Lightweight helper that creates two PipeWire virtual sinks (Arctis_Game and Arctis_Chat), links them to your SteelSeries Arctis Nova 7 dongle, and exposes the headset's hardware ChatMix HID controls to set volumes for each virtual sink. The program watches for the dongle being unplugged and will automatically reconnect, relink the virtual sinks and move existing audio streams so playback continues without restarting apps.
+Lightweight helper that creates two PipeWire virtual sinks (`Arctis_Game` and `Arctis_Chat`), links them to your SteelSeries Arctis Nova 7 dongle, and exposes the headset's hardware ChatMix HID controls to set volumes for each virtual sink. The program watches for the dongle being unplugged and will automatically reconnect, relink the virtual sinks and move existing audio streams so playback continues without restarting apps.
 
 This repository contains:
-- Rust implementation of the controller (`src/main.rs`)
-- Convenience installer script (`install.sh`) that can install as a per-user systemd service or system-wide service and optionally install a udev rule
-- Packaging helpers for Arch/AUR (optional)
+- Rust implementation of the controller (`source/src/main.rs`)
+- Convenience installer/uninstaller script (`install.sh`) that can install as a per-user systemd service or system-wide service and optionally manage a udev rule
+- Pre-built binary (`arctis_chatmix`) for quick installation without requiring Rust
+
+## Supported Devices
 
 Supported (tested) environment:
-- Linux with PipeWire (pactl, pw-link / pw-cli available)
+- Linux with PipeWire (`pactl`, `pw-link` / `pw-cli` available)
 - libusb for HID reads
-- The SteelSeries Arctis Nova 7 dongle (vendor: 0x1038)
-  - Arctis Nova 7 (0x2202)
-  - Arctis Nova 7 Gen 2 (Feb 2026 update) (0x22A1)
-  - Arctis Nova 7 Wireless Gen 2 (0x227e)
-  - Arctis Nova 7x (0x2206)
-  - Arctis Nova 7x v2 (0x2258, 0x229e)
-  - Arctis Nova 7 Diablo IV (0x223a, 0x22a9)
-  - Arctis Nova 7 WoW Edition (0x227a)
+- The SteelSeries Arctis Nova 7 dongle (vendor: `0x1038`)
 
-Features
+| Model | Product ID |
+|-------|------------|
+| Arctis Nova 7 | `0x2202` |
+| Arctis Nova 7 Gen 2 (Feb 2026 update) | `0x22A1` |
+| Arctis Nova 7 Wireless Gen 2 | `0x227e` |
+| Arctis Nova 7x | `0x2206` |
+| Arctis Nova 7x v2 | `0x2258`, `0x229e` |
+| Arctis Nova 7 Diablo IV | `0x223a`, `0x22a9` |
+| Arctis Nova 7 WoW Edition | `0x227a` |
+
+## Features
+
 - Creates two virtual sinks:
-  - Arctis_Game — intended for game audio
-  - Arctis_Chat — intended for voice/chat audio
-- Links virtual sinks to the physical headset playback ports (pw-link)
+  - `Arctis_Game` — intended for game audio
+  - `Arctis_Chat` — intended for voice/chat audio
+- Links virtual sinks to the physical headset playback ports (`pw-link`)
 - Reads the dongle HID ChatMix reports and maps the physical Game/Chat knob values to the two virtual sinks
 - Detects unplug/replug and:
   - reclaims the USB interface (tries libusb auto-detach and manual detach)
   - relinks virtual sinks to the current physical device node
-  - sets Arctis_Game as the default sink
-  - moves existing sink-inputs (clients) to Arctis_Game so audio continues without restarting applications
+  - sets `Arctis_Game` as the default sink
+  - moves existing sink-inputs (clients) to `Arctis_Game` so audio continues without restarting applications
 - Clean shutdown sets the original default sink back and destroys the virtual sink nodes
+
+---
 
 ## Installation
 
 ### Quick Start
+
 1. Clone the repository:
    ```bash
    git clone https://github.com/m24ih/Arctis-Nova-7-Chatmix.git
    cd Arctis-Nova-7-Chatmix
    ```
-
-
 
 2. Run the installer:
    ```bash
@@ -49,62 +56,145 @@ Features
    ./install.sh
    # Select the pre-built 'arctis_chatmix' binary when prompted (default)
    ```
-   - The script will guide you through the process (user/system service, udev rules, etc.).
+   The script will guide you through the process (user/system service, udev rules, etc.).
 
-### Non-interactive example
-
+### Non-interactive Examples
 
 - Per-user install:
+  ```bash
   ./install.sh --binary ./arctis_chatmix --mode user --udev yes --enable-service yes --enable-linger no
+  ```
 
 - System install (requires sudo):
+  ```bash
   sudo ./install.sh --binary ./arctis_chatmix --mode system --udev yes --enable-service yes
+  ```
 
-Files the installer writes
-- User mode:
-  - Binary -> ~/.local/bin/arctis_chatmix
-  - Systemd unit -> ~/.config/systemd/user/arctis_chatmix.service
-- System mode:
-  - Binary -> /usr/local/bin/arctis_chatmix
-  - Systemd unit -> /etc/systemd/system/arctis_chatmix.service
-- Optional udev rule:
-  - /etc/udev/rules.d/99-arctis.rules
+### Files the installer writes
 
-udev rule (recommended for non-root installs)
-The provided udev rule grants the active session user and audio group access to the dongle. After installing the rule:
-- Ensure your user is in the `audio` group (sudo usermod -aG audio $USER) and re-login.
+| Mode | Binary | Systemd unit |
+|------|--------|--------------|
+| User | `~/.local/bin/arctis_chatmix` | `~/.config/systemd/user/arctis_chatmix.service` |
+| System | `/usr/local/bin/arctis_chatmix` | `/etc/systemd/system/arctis_chatmix.service` |
+
+Optional udev rule: `/etc/udev/rules.d/99-arctis.rules`
+
+### udev rule (recommended for non-root installs)
+
+The provided udev rule grants the active session user and `audio` group access to the dongle. After installing the rule:
+
+- Ensure your user is in the `audio` group and re-login:
+  ```bash
+  sudo usermod -aG audio $USER
+  ```
 - Reload rules:
+  ```bash
   sudo udevadm control --reload
-  sudo udevadm trigger --subsystem-match=usb --attr-match=idVendor=1038 --attr-match=idProduct=2202
+  sudo udevadm trigger --subsystem-match=usb --attr-match=idVendor=1038
+  ```
 
-Running and logs
+---
+
+## Uninstallation
+
+Use the same `install.sh` script with the `--uninstall` flag.
+
+### Interactive uninstall
+
+```bash
+./install.sh --uninstall
+```
+
+The script will ask which mode (user/system) and whether to also remove the udev rule.
+
+### Non-interactive uninstall
+
+- Per-user uninstall (also removes udev rule):
+  ```bash
+  ./install.sh --uninstall --mode user --udev yes
+  ```
+
+- System uninstall (requires sudo, keep udev rule):
+  ```bash
+  sudo ./install.sh --uninstall --mode system --udev no
+  ```
+
+### What uninstall removes
+
+| Step | User mode | System mode |
+|------|-----------|-------------|
+| Stop service | `systemctl --user stop` | `sudo systemctl stop` |
+| Disable service | `systemctl --user disable` | `sudo systemctl disable` |
+| Remove unit file | `~/.config/systemd/user/` | `/etc/systemd/system/` |
+| Remove binary | `~/.local/bin/arctis_chatmix` | `/usr/local/bin/arctis_chatmix` |
+| Remove udev rule *(optional)* | `/etc/udev/rules.d/99-arctis.rules` | same |
+
+> **Note:** Virtual sinks (`Arctis_Game` / `Arctis_Chat`) will disappear after your PipeWire session restarts or on next login.
+
+---
+
+## Running and Logs
+
 - Per-user service logs:
+  ```bash
   journalctl --user -u arctis_chatmix.service -f
+  ```
 - System service logs:
+  ```bash
   sudo journalctl -u arctis_chatmix.service -f
+  ```
 
-Troubleshooting
+---
+
+## Building from Source
+
+Requirements: Rust, `libusb`, `hidapi`, `pkgconf`
+
+```bash
+# Arch Linux
+sudo pacman -S rust libusb hidapi pkgconf
+
+# Build
+cd source
+cargo build --release
+# Output: source/target/release/arctis_chatmix
+```
+
+---
+
+## Troubleshooting
+
 - Confirm PipeWire sees the physical sink:
+  ```bash
   pactl list short sinks
+  ```
 - Confirm virtual sinks exist:
+  ```bash
   pactl list short sinks | grep Arctis
+  ```
 - Confirm sink inputs (clients):
+  ```bash
   pactl list short sink-inputs
+  ```
 - If clients don't hear audio after reconnect:
-  - Check logs (journalctl)
-  - Verify the installer's udev rule applied (ls -l /dev/hidraw* or ls -l /dev/bus/usb/*/*)
+  - Check logs (`journalctl`)
+  - Verify the udev rule applied: `ls -l /dev/hidraw*` or `ls -l /dev/bus/usb/*/*`
   - Manually set default sink and move clients:
+    ```bash
     pactl set-default-sink Arctis_Game
     pactl move-sink-input <index> Arctis_Game
+    ```
 
-Security & permissions
+## Security & Permissions
+
 - The process needs permission to access the USB device (via libusb). The udev rule + membership in `audio` is the recommended approach to avoid running the service as root.
 - If detach/claim fails repeatedly, running as root will usually work, but it's less desirable for interacting with a user PipeWire session.
 
+---
 
+## License
 
-License
-- This project is provided under the MIT license — see the included LICENSE file.
+This project is provided under the MIT license — see the included [LICENSE](LICENSE) file.
 
 ## Contributing
 
