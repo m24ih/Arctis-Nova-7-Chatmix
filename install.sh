@@ -99,6 +99,15 @@ ask_yes_no() {
   done
 }
 
+# Run a command with sudo if not already root.
+run_privileged() {
+  if [[ $EUID -ne 0 ]]; then
+    sudo "$@"
+  else
+    "$@"
+  fi
+}
+
 IS_TTY=1
 [[ ! -t 0 ]] && IS_TTY=0
 
@@ -140,39 +149,22 @@ uninstall_user() {
 
 uninstall_system() {
   echo "Stopping and disabling system service (requires sudo)..."
-  if [[ $EUID -ne 0 ]]; then
-    sudo systemctl stop    "$SERVICE_NAME" 2>/dev/null || true
-    sudo systemctl disable "$SERVICE_NAME" 2>/dev/null || true
-  else
-    systemctl stop    "$SERVICE_NAME" 2>/dev/null || true
-    systemctl disable "$SERVICE_NAME" 2>/dev/null || true
-  fi
+  run_privileged systemctl stop    "$SERVICE_NAME" 2>/dev/null || true
+  run_privileged systemctl disable "$SERVICE_NAME" 2>/dev/null || true
 
   local unit_file="$SYSTEM_UNIT_DIR/$SERVICE_NAME"
   if [[ -f "$unit_file" ]]; then
-    if [[ $EUID -ne 0 ]]; then
-      sudo rm -f "$unit_file"
-    else
-      rm -f "$unit_file"
-    fi
+    run_privileged rm -f "$unit_file"
     echo "Removed unit: $unit_file"
   else
     echo "Unit file not found (already removed?): $unit_file"
   fi
 
-  if [[ $EUID -ne 0 ]]; then
-    sudo systemctl daemon-reload
-  else
-    systemctl daemon-reload
-  fi
+  run_privileged systemctl daemon-reload
 
   local bin_file="$SYSTEM_BIN_DIR/arctis_chatmix"
   if [[ -f "$bin_file" ]]; then
-    if [[ $EUID -ne 0 ]]; then
-      sudo rm -f "$bin_file"
-    else
-      rm -f "$bin_file"
-    fi
+    run_privileged rm -f "$bin_file"
     echo "Removed binary: $bin_file"
   else
     echo "Binary not found (already removed?): $bin_file"
@@ -186,13 +178,8 @@ uninstall_udev() {
   fi
   if [[ -f "$UDEV_RULE_PATH" ]]; then
     echo "Removing udev rule (requires sudo)..."
-    if [[ $EUID -ne 0 ]]; then
-      sudo rm -f "$UDEV_RULE_PATH"
-      sudo udevadm control --reload
-    else
-      rm -f "$UDEV_RULE_PATH"
-      udevadm control --reload
-    fi
+    run_privileged rm -f "$UDEV_RULE_PATH"
+    run_privileged udevadm control --reload
     echo "Removed udev rule: $UDEV_RULE_PATH"
   else
     echo "udev rule not found (already removed?): $UDEV_RULE_PATH"
@@ -230,7 +217,7 @@ run_uninstall() {
 ensure_audio_group() {
   getent group audio >/dev/null && return
   echo "Creating audio group (requires sudo)..."
-  [[ $EUID -ne 0 ]] && sudo groupadd -r audio || groupadd -r audio
+  run_privileged groupadd -r audio
 }
 
 add_user_to_audio_group() {
@@ -238,14 +225,13 @@ add_user_to_audio_group() {
   u="$(id -un)"
   id -nG "$u" | grep -qw audio && return
   echo "Adding user '$u' to audio group (requires sudo)..."
-  [[ $EUID -ne 0 ]] && sudo usermod -aG audio "$u" || usermod -aG audio "$u"
+  run_privileged usermod -aG audio "$u"
   echo "IMPORTANT: You must log out and log back in (or reboot)."
 }
 
 install_user() {
   mkdir -p "$USER_BIN_DIR" "$USER_UNIT_DIR"
   install -m 755 "$BINARY" "$USER_BIN_DIR/arctis_chatmix"
-  mkdir -p "${USER_UNIT_DIR}"
   cat >"${USER_UNIT_DIR}/${SERVICE_NAME}" <<'UNIT'
 [Unit]
 Description=Arctis Nova 7 ChatMix (virtual-sink mixer)
@@ -263,20 +249,16 @@ UNIT
   systemctl --user daemon-reload
   [[ "$ENABLE_SERVICE" == "yes" ]] && systemctl --user enable --now "$SERVICE_NAME" || true
   [[ "$ENABLE_LINGER" == "yes" ]] &&
-    ([[ $EUID -ne 0 ]] && sudo loginctl enable-linger "$(id -un)" || loginctl enable-linger "$(id -un)") || true
+    run_privileged loginctl enable-linger "$(id -un)" || true
 }
 
 install_system() {
   echo "Installing system-wide (requires sudo)..."
-  if [[ $EUID -ne 0 ]]; then
-    sudo install -m 755 "${BINARY}" "${SYSTEM_BIN_DIR}/arctis_chatmix"
-  else
-    install -m 755 "${BINARY}" "${SYSTEM_BIN_DIR}/arctis_chatmix"
-  fi
+  run_privileged install -m 755 "${BINARY}" "${SYSTEM_BIN_DIR}/arctis_chatmix"
   echo "Binary installed to ${SYSTEM_BIN_DIR}/arctis_chatmix"
 
-  if [[ $EUID -ne 0 ]]; then
-    sudo tee "${SYSTEM_UNIT_DIR}/${SERVICE_NAME}" >/dev/null <<'UNIT'
+  local unit_content
+  read -r -d '' unit_content <<'UNIT' || true
 [Unit]
 Description=Arctis Nova 7 ChatMix (virtual-sink mixer)
 Wants=pipewire.service
@@ -291,26 +273,10 @@ RestartSec=5
 [Install]
 WantedBy=multi-user.target
 UNIT
-    sudo systemctl daemon-reload
-    [[ "${ENABLE_SERVICE}" == "yes" ]] && sudo systemctl enable --now "$SERVICE_NAME"
-  else
-    tee "${SYSTEM_UNIT_DIR}/${SERVICE_NAME}" >/dev/null <<'UNIT'
-[Unit]
-Description=Arctis Nova 7 ChatMix (virtual-sink mixer)
-Wants=pipewire.service
-After=pipewire.service
-[Service]
-ExecStart=/usr/local/bin/arctis_chatmix
-Environment=ARCTIS_SIDETONE_DISABLE=1
-Environment=RUST_LOG=info
-Restart=on-failure
-RestartSec=5
-[Install]
-WantedBy=multi-user.target
-UNIT
-    systemctl daemon-reload
-    [[ "${ENABLE_SERVICE}" == "yes" ]] && systemctl enable --now "$SERVICE_NAME"
-  fi
+
+  echo "$unit_content" | run_privileged tee "${SYSTEM_UNIT_DIR}/${SERVICE_NAME}" >/dev/null
+  run_privileged systemctl daemon-reload
+  [[ "${ENABLE_SERVICE}" == "yes" ]] && run_privileged systemctl enable --now "$SERVICE_NAME"
 }
 
 install_udev() {
@@ -327,19 +293,11 @@ install_udev() {
 KERNEL=="hidraw*", ATTRS{idVendor}=="1038", ATTRS{idProduct}=="'"$pid"'", MODE="0660", GROUP="audio", TAG+="uaccess"
 '
   done
-  if [[ $EUID -ne 0 ]]; then
-    echo "$UDEV_CONTENT" | sudo tee "${UDEV_RULE_PATH}" >/dev/null
-    sudo udevadm control --reload
-    for pid in "${PIDS[@]}"; do
-      sudo udevadm trigger --subsystem-match=usb --attr-match=idVendor=1038 --attr-match=idProduct="$pid" || true
-    done
-  else
-    echo "$UDEV_CONTENT" >"${UDEV_RULE_PATH}"
-    udevadm control --reload
-    for pid in "${PIDS[@]}"; do
-      udevadm trigger --subsystem-match=usb --attr-match=idVendor=1038 --attr-match=idProduct="$pid" || true
-    done
-  fi
+  echo "$UDEV_CONTENT" | run_privileged tee "${UDEV_RULE_PATH}" >/dev/null
+  run_privileged udevadm control --reload
+  for pid in "${PIDS[@]}"; do
+    run_privileged udevadm trigger --subsystem-match=usb --attr-match=idVendor=1038 --attr-match=idProduct="$pid" || true
+  done
   echo "udev rule installed to ${UDEV_RULE_PATH}"
   echo "Make sure your user is in the 'audio' group (sudo usermod -aG audio <user>) and re-login."
 }

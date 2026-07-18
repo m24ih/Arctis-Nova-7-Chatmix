@@ -1,10 +1,8 @@
+use crate::audio::{find_arctis_sink, get_default_sink, link_sink_to_device, move_all_inputs_to, set_sink_volume};
+use crate::usb::usb_find_and_open;
 use anyhow::{Context, Result};
-use ctrlc;
-use env_logger;
-use hidapi::HidApi;
 use log::{debug, error, info, warn};
 use rusb::{DeviceHandle, UsbContext};
-use std::env;
 use std::process::{Command, Stdio};
 use std::sync::{
     atomic::{AtomicBool, Ordering},
@@ -12,29 +10,14 @@ use std::sync::{
 };
 use std::time::Duration;
 
-// Arctis Nova 7 Vendor/Product IDs
-const VENDOR_ID: u16 = 0x1038;
-const SUPPORTED_PRODUCT_IDS: &[u16] = &[
-    0x2202, // Arctis Nova 7 (discrete battery: 0-4)
-    0x22A1, // Arctis Nova 7 Gen 2 (percentage battery: 0-100, Jan 2026 update)
-    0x227e, // Arctis Nova 7 Wireless Gen 2 (percentage battery: 0-100)
-    0x2206, // Arctis Nova 7x (discrete battery: 0-4)
-    0x2258, // Arctis Nova 7x v2 (percentage battery: 0-100)
-    0x229e, // Arctis Nova 7x v2 (percentage battery: 0-100)
-    0x223a, // Arctis Nova 7 Diablo IV (discrete battery: 0-4, before Jan 2026 update)
-    0x22a9, // Arctis Nova 7 Diablo IV (percentage battery: 0-100, after Jan 2026 update)
-    0x227a  // Arctis Nova 7 WoW Edition (discrete battery: 0-4)
-];
-const HID_MSG_SIZE: usize = 64;
-
-struct ArctisController {
+pub(crate) struct ArctisController {
     original_default_sink: String,
     running: Arc<AtomicBool>,
     sinks_created: Arc<AtomicBool>,
 }
 
 impl ArctisController {
-    fn new() -> Result<Self> {
+    pub(crate) fn new() -> Result<Self> {
         let original_default_sink = get_default_sink().unwrap_or_else(|_| "auto_null".to_string());
         info!("Original default sink: {}", original_default_sink);
 
@@ -126,7 +109,7 @@ impl ArctisController {
         Ok(())
     }
 
-    fn start(&self) -> Result<()> {
+    pub(crate) fn start(&self) -> Result<()> {
         // 1. Attempt to create virtual audio sinks
         loop {
             if !self.running.load(Ordering::SeqCst) {
@@ -318,192 +301,4 @@ impl Drop for ArctisController {
     fn drop(&mut self) {
         self.cleanup();
     }
-}
-
-fn main() -> Result<()> {
-    env_logger::init();
-    info!("Initializing Arctis Nova 7 ChatMix Controller...");
-
-    let controller = ArctisController::new()?;
-    controller.start()?;
-
-    Ok(())
-}
-
-fn get_default_sink() -> Result<String> {
-    let output = Command::new("pactl")
-        .arg("get-default-sink")
-        .output()
-        .context("Failed to get default sink")?;
-    let sink = String::from_utf8(output.stdout)?.trim().to_string();
-    if sink.is_empty() {
-        anyhow::bail!("Empty default sink");
-    }
-    Ok(sink)
-}
-
-fn find_arctis_sink() -> Result<String> {
-    let output = Command::new("pactl")
-        .args(&["list", "short", "sinks"])
-        .output()
-        .context("Failed to list sinks")?;
-
-    let sinks = String::from_utf8(output.stdout)?;
-    let mut fallback: Option<String> = None;
-
-    for line in sinks.lines() {
-        let lower = line.to_lowercase();
-        // Match on "nova" or "7" in addition to "arctis"
-        if lower.contains("arctis") && (lower.contains("7") || lower.contains("nova")) {
-            let parts: Vec<&str> = line.split('\t').collect();
-            if parts.len() >= 2 {
-                let name = parts[1].to_string();
-                if lower.contains("usb") || lower.contains("playback") {
-                    return Ok(name);
-                }
-                if fallback.is_none() {
-                    fallback = Some(name);
-                }
-            }
-        }
-    }
-
-    if let Some(f) = fallback {
-        return Ok(f);
-    }
-    anyhow::bail!("No Arctis Nova 7 device found in pactl output");
-}
-
-// FIX: Idempotent Link Creation
-fn link_sink_to_device(sink_name: &str, device_name: &str) -> Result<()> {
-    for channel in ["FL", "FR"] {
-        let src = format!("{}:monitor_{}", sink_name, channel);
-        let dst = format!("{}:playback_{}", device_name, channel);
-
-        let output = Command::new("pw-link")
-            .arg(&src)
-            .arg(&dst)
-            .output()
-            .context(format!("Failed to execute pw-link for {}", channel))?;
-
-        if !output.status.success() {
-            let stderr = String::from_utf8_lossy(&output.stderr);
-            // If the link already exists, treat it as success rather than an error.
-            if stderr.contains("File exists") || stderr.contains("exists") {
-                debug!("Link already exists (skipping): {} -> {}", src, dst);
-            } else {
-                anyhow::bail!("pw-link failed for {}: {}", channel, stderr.trim());
-            }
-        }
-    }
-    Ok(())
-}
-
-fn set_sink_volume(sink_name: &str, volume_percent: u8) {
-    let _ = Command::new("pactl")
-        .args(&["set-sink-volume", sink_name, &format!("{}%", volume_percent)])
-        .output();
-}
-
-fn move_all_inputs_to(sink_name: &str) -> Result<()> {
-    let output = Command::new("pactl")
-        .args(&["list", "short", "sink-inputs"])
-        .output()
-        .context("Failed to list sink-inputs")?;
-
-    let stdout = String::from_utf8(output.stdout)?;
-    for line in stdout.lines() {
-        let cols: Vec<&str> = line.split('\t').collect();
-        if !cols.is_empty() {
-            if let Ok(index) = cols[0].parse::<u32>() {
-                // Ignore errors — some inputs may not be movable.
-                let _ = Command::new("pactl")
-                    .args(&["move-sink-input", &index.to_string(), sink_name])
-                    .status();
-            }
-        }
-    }
-    Ok(())
-}
-
-/* ---------- hidapi sidetone write ---------- */
-fn try_hidapi_sidetone_from_env() {
-    // Skip sidetone if disabled via ARCTIS_SIDETONE_DISABLE=1
-    if env::var("ARCTIS_SIDETONE_DISABLE").as_deref() == Ok("1") {
-        debug!("Sidetone disabled via ARCTIS_SIDETONE_DISABLE=1, skipping.");
-        return;
-    }
-    // Read sidetone level from environment variable
-    if let Ok(v) = env::var("ARCTIS_SIDETONE_PERCENT") {
-        if let Ok(num) = v.trim().parse::<u8>() {
-            let _ = hidapi_send_sidetone(num.min(100));
-        }
-    }
-}
-
-fn hidapi_send_sidetone(percent: u8) -> Result<()> {
-    let bucket = if percent < 30 { 0x00 } else if percent < 60 { 0x01 } else if percent < 80 { 0x02 } else { 0x03 };
-    let mut data = [0u8; HID_MSG_SIZE];
-    data[0] = 0x00;
-    data[1] = 0x39;
-    data[2] = bucket;
-
-    let api = HidApi::new()?;
-    // Try to open any of the supported devices
-    let device = SUPPORTED_PRODUCT_IDS.iter().find_map(|&pid| {
-        api.open(VENDOR_ID, pid).ok()
-    }).context("Failed to open any supported Arctis Nova 7 device for sidetone")?;
-    
-    device.write(&data)?;
-    info!("Sidetone updated to bucket {}", bucket);
-    Ok(())
-}
-
-/* ---------- USB Finder ---------- */
-fn usb_find_and_open<T: UsbContext>(usb_ctx: &T) -> Result<(DeviceHandle<T>, u8, u8)> {
-    let dev = usb_ctx.devices()?.iter().find(|d| {
-        if let Ok(desc) = d.device_descriptor() {
-            desc.vendor_id() == VENDOR_ID && SUPPORTED_PRODUCT_IDS.contains(&desc.product_id())
-        } else { false }
-    }).ok_or_else(|| anyhow::anyhow!("Arctis Nova 7 not found"))?;
-
-    let config = dev.config_descriptor(0)?;
-    let mut target_interface_num = None;
-    let mut target_endpoint = 0x84u8; // Fallback default
-
-    for interface in config.interfaces() {
-        if let Some(desc) = interface.descriptors().next() {
-            if desc.class_code() == 3 { // HID Class
-                for endpoint in desc.endpoint_descriptors() {
-                    if endpoint.transfer_type() == rusb::TransferType::Interrupt && endpoint.direction() == rusb::Direction::In {
-                        target_interface_num = Some(desc.interface_number());
-                        target_endpoint = endpoint.address();
-                        break;
-                    }
-                }
-            }
-        }
-    }
-
-    let interface_num = target_interface_num.ok_or_else(|| anyhow::anyhow!("Could not find HID interface"))?;
-    let handle = dev.open().context("Failed to open USB device")?;
-
-    try_hidapi_sidetone_from_env();
-
-    // Kernel Driver Detach
-    let _ = handle.set_auto_detach_kernel_driver(true);
-    if let Ok(true) = handle.kernel_driver_active(interface_num) {
-        let _ = handle.detach_kernel_driver(interface_num);
-    }
-
-    // Claim Interface with Retry
-    const CLAIM_RETRIES: usize = 5;
-    for _ in 1..=CLAIM_RETRIES {
-        if handle.claim_interface(interface_num).is_ok() {
-            return Ok((handle, target_endpoint, interface_num));
-        }
-        std::thread::sleep(Duration::from_millis(200));
-    }
-
-    Err(anyhow::anyhow!("Failed to claim interface"))
 }

@@ -3,7 +3,7 @@
 Lightweight helper that creates two PipeWire virtual sinks (`Arctis_Game` and `Arctis_Chat`), links them to your SteelSeries Arctis Nova 7 dongle, and exposes the headset's hardware ChatMix HID controls to set volumes for each virtual sink. The program watches for the dongle being unplugged and will automatically reconnect, relink the virtual sinks and move existing audio streams so playback continues without restarting apps.
 
 This repository contains:
-- Rust implementation of the controller (`source/src/main.rs`)
+- Rust implementation of the controller (`src/`)
 - Convenience installer/uninstaller script (`install.sh`) that can install as a per-user systemd service or system-wide service and optionally manage a udev rule
 - Pre-built binary (`arctis_chatmix`) for quick installation without requiring Rust
 
@@ -155,9 +155,8 @@ Requirements: Rust, `libusb`, `hidapi`, `pkgconf`
 sudo pacman -S rust libusb hidapi pkgconf
 
 # Build
-cd source
 cargo build --release
-# Output: source/target/release/arctis_chatmix
+# Output: target/release/arctis_chatmix
 ```
 
 ---
@@ -212,7 +211,6 @@ We welcome contributions! Here's how to get started:
    ```
 4. Make your changes and verify they build:
    ```bash
-   cd source
    cargo build
    ```
 5. Commit and push your changes:
