@@ -186,6 +186,39 @@ uninstall_udev() {
   fi
 }
 
+revert_digital_profile() {
+  echo "Reverting Arctis Nova 7 to Analog profile..."
+  local card_name
+  card_name=$(pactl list short cards 2>/dev/null | grep -i -E 'arctis.*nova|steelseries.*arctis' | awk '{print $2}' | head -n 1)
+  
+  if [[ -n "$card_name" ]]; then
+    if pactl set-card-profile "$card_name" "output:analog-stereo+input:mono-fallback" 2>/dev/null; then
+      echo "Successfully reverted profile to Analog Stereo + Mono Input."
+    elif pactl set-card-profile "$card_name" "output:analog-stereo" 2>/dev/null; then
+      echo "Successfully reverted profile to Analog Stereo."
+    fi
+  fi
+}
+
+uninstall_rtkit() {
+  if [[ "$SKIP_CONFIRM" != "yes" ]]; then
+    if [[ "$(ask_yes_no "Remove rtkit (RealtimeKit)? WARNING: Other audio apps may depend on it!" no)" != "yes" ]]; then
+      echo "Skipping rtkit removal."
+      return
+    fi
+  fi
+
+  echo "Removing rtkit (requires sudo)..."
+  if command -v pacman >/dev/null 2>&1; then
+    run_privileged pacman -Rns --noconfirm rtkit || true
+  elif command -v apt-get >/dev/null 2>&1; then
+    run_privileged apt-get remove -y rtkit || true
+  elif command -v dnf >/dev/null 2>&1; then
+    run_privileged dnf remove -y rtkit || true
+  fi
+  echo "rtkit removed."
+}
+
 run_uninstall() {
   echo "== arctis_chatmix uninstaller =="
 
@@ -203,6 +236,8 @@ run_uninstall() {
     uninstall_system
   fi
   uninstall_udev
+  revert_digital_profile
+  uninstall_rtkit
 
   echo ""
   echo "✓ Uninstall complete."
@@ -302,6 +337,47 @@ KERNEL=="hidraw*", ATTRS{idVendor}=="1038", ATTRS{idProduct}=="'"$pid"'", MODE="
   echo "Make sure your user is in the 'audio' group (sudo usermod -aG audio <user>) and re-login."
 }
 
+install_rtkit() {
+  echo "Checking for rtkit (RealtimeKit)..."
+  if systemctl status rtkit-daemon.service >/dev/null 2>&1; then
+    echo "rtkit is already installed and running."
+    return
+  fi
+
+  echo "rtkit is not running. Attempting to install and enable it (requires sudo)..."
+  if command -v pacman >/dev/null 2>&1; then
+    run_privileged pacman -S --noconfirm rtkit
+  elif command -v apt-get >/dev/null 2>&1; then
+    run_privileged apt-get install -y rtkit
+  elif command -v dnf >/dev/null 2>&1; then
+    run_privileged dnf install -y rtkit
+  else
+    echo "[warn] Could not determine package manager. Please install 'rtkit' manually."
+    return
+  fi
+
+  run_privileged systemctl enable --now rtkit-daemon.service || true
+  echo "rtkit installed and enabled."
+}
+
+configure_digital_profile() {
+  echo "Attempting to switch Arctis Nova 7 to Digital (IEC958) profile to prevent audio crackling..."
+  local card_name
+  card_name=$(pactl list short cards 2>/dev/null | grep -i -E 'arctis.*nova|steelseries.*arctis' | awk '{print $2}' | head -n 1)
+  
+  if [[ -n "$card_name" ]]; then
+    if pactl set-card-profile "$card_name" "output:iec958-stereo+input:mono-fallback" 2>/dev/null; then
+      echo "Successfully set profile to Digital Stereo (IEC958) + Mono Input."
+    elif pactl set-card-profile "$card_name" "output:iec958-stereo" 2>/dev/null; then
+      echo "Successfully set profile to Digital Stereo (IEC958)."
+    else
+      echo "[warn] Could not set digital profile automatically. Please do it via pavucontrol."
+    fi
+  else
+    echo "[warn] Arctis Nova 7 card not found. Ensure the dongle is plugged in to apply the digital profile."
+  fi
+}
+
 run_install() {
   echo "== arctis_chatmix installer =="
 
@@ -326,6 +402,8 @@ run_install() {
   ensure_audio_group   || echo "[warn] Could not ensure audio group (run manually: sudo groupadd -r audio)"
   add_user_to_audio_group || echo "[warn] Could not add user to audio group (run manually: sudo usermod -aG audio $(id -un))"
   install_udev
+  install_rtkit
+  configure_digital_profile
   echo "Installation complete."
   echo "If audio group was modified: LOG OUT and LOG BACK IN."
 }
