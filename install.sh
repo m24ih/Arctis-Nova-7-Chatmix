@@ -186,20 +186,6 @@ uninstall_udev() {
   fi
 }
 
-revert_digital_profile() {
-  echo "Reverting Arctis Nova 7 to Analog profile..."
-  local card_name
-  card_name=$(pactl list short cards 2>/dev/null | grep -i -E 'arctis.*nova|steelseries.*arctis' | awk '{print $2}' | head -n 1)
-  
-  if [[ -n "$card_name" ]]; then
-    if pactl set-card-profile "$card_name" "output:analog-stereo+input:mono-fallback" 2>/dev/null; then
-      echo "Successfully reverted profile to Analog Stereo + Mono Input."
-    elif pactl set-card-profile "$card_name" "output:analog-stereo" 2>/dev/null; then
-      echo "Successfully reverted profile to Analog Stereo."
-    fi
-  fi
-}
-
 uninstall_rtkit() {
   if [[ "$SKIP_CONFIRM" != "yes" ]]; then
     if [[ "$(ask_yes_no "Remove rtkit (RealtimeKit)? WARNING: Other audio apps may depend on it!" no)" != "yes" ]]; then
@@ -236,7 +222,6 @@ run_uninstall() {
     uninstall_system
   fi
   uninstall_udev
-  revert_digital_profile
   uninstall_rtkit
 
   echo ""
@@ -326,6 +311,7 @@ install_udev() {
   for pid in "${PIDS[@]}"; do
     UDEV_CONTENT+='ATTRS{idVendor}=="1038", ATTRS{idProduct}=="'"$pid"'", MODE="0660", GROUP="audio", TAG+="uaccess"
 KERNEL=="hidraw*", ATTRS{idVendor}=="1038", ATTRS{idProduct}=="'"$pid"'", MODE="0660", GROUP="audio", TAG+="uaccess"
+ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="1038", ATTR{idProduct}=="'"$pid"'", TEST=="power/control", ATTR{power/control}="on"
 '
   done
   echo "$UDEV_CONTENT" | run_privileged tee "${UDEV_RULE_PATH}" >/dev/null
@@ -360,24 +346,6 @@ install_rtkit() {
   echo "rtkit installed and enabled."
 }
 
-configure_digital_profile() {
-  echo "Attempting to switch Arctis Nova 7 to Digital (IEC958) profile to prevent audio crackling..."
-  local card_name
-  card_name=$(pactl list short cards 2>/dev/null | grep -i -E 'arctis.*nova|steelseries.*arctis' | awk '{print $2}' | head -n 1)
-  
-  if [[ -n "$card_name" ]]; then
-    if pactl set-card-profile "$card_name" "output:iec958-stereo+input:mono-fallback" 2>/dev/null; then
-      echo "Successfully set profile to Digital Stereo (IEC958) + Mono Input."
-    elif pactl set-card-profile "$card_name" "output:iec958-stereo" 2>/dev/null; then
-      echo "Successfully set profile to Digital Stereo (IEC958)."
-    else
-      echo "[warn] Could not set digital profile automatically. Please do it via pavucontrol."
-    fi
-  else
-    echo "[warn] Arctis Nova 7 card not found. Ensure the dongle is plugged in to apply the digital profile."
-  fi
-}
-
 run_install() {
   echo "== arctis_chatmix installer =="
 
@@ -403,7 +371,6 @@ run_install() {
   add_user_to_audio_group || echo "[warn] Could not add user to audio group (run manually: sudo usermod -aG audio $(id -un))"
   install_udev
   install_rtkit
-  configure_digital_profile
   echo "Installation complete."
   echo "If audio group was modified: LOG OUT and LOG BACK IN."
 }

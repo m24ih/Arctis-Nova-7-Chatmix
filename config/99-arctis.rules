@@ -5,34 +5,53 @@
 ATTRS{idVendor}=="1038", ATTRS{idProduct}=="2202", MODE="0660", GROUP="audio", TAG+="uaccess"
 KERNEL=="hidraw*", ATTRS{idVendor}=="1038", ATTRS{idProduct}=="2202", MODE="0660", GROUP="audio", TAG+="uaccess"
 
+ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="1038", ATTR{idProduct}=="2202", TEST=="power/control", ATTR{power/control}="on"
+
 # Arctis Nova 7 Gen 2 (Jan 2026 update)
 ATTRS{idVendor}=="1038", ATTRS{idProduct}=="22a1", MODE="0660", GROUP="audio", TAG+="uaccess"
 KERNEL=="hidraw*", ATTRS{idVendor}=="1038", ATTRS{idProduct}=="22a1", MODE="0660", GROUP="audio", TAG+="uaccess"
+
+ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="1038", ATTR{idProduct}=="22a1", TEST=="power/control", ATTR{power/control}="on"
 
 # Arctis Nova 7 Wireless Gen 2
 ATTRS{idVendor}=="1038", ATTRS{idProduct}=="227e", MODE="0660", GROUP="audio", TAG+="uaccess"
 KERNEL=="hidraw*", ATTRS{idVendor}=="1038", ATTRS{idProduct}=="227e", MODE="0660", GROUP="audio", TAG+="uaccess"
 
+ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="1038", ATTR{idProduct}=="227e", TEST=="power/control", ATTR{power/control}="on"
+
 # Arctis Nova 7x
 ATTRS{idVendor}=="1038", ATTRS{idProduct}=="2206", MODE="0660", GROUP="audio", TAG+="uaccess"
 KERNEL=="hidraw*", ATTRS{idVendor}=="1038", ATTRS{idProduct}=="2206", MODE="0660", GROUP="audio", TAG+="uaccess"
+
+ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="1038", ATTR{idProduct}=="2206", TEST=="power/control", ATTR{power/control}="on"
 
 # Arctis Nova 7x v2 (Variant 1)
 ATTRS{idVendor}=="1038", ATTRS{idProduct}=="2258", MODE="0660", GROUP="audio", TAG+="uaccess"
 KERNEL=="hidraw*", ATTRS{idVendor}=="1038", ATTRS{idProduct}=="2258", MODE="0660", GROUP="audio", TAG+="uaccess"
 
+ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="1038", ATTR{idProduct}=="2258", TEST=="power/control", ATTR{power/control}="on"
+
 # Arctis Nova 7x v2 (Variant 2)
 ATTRS{idVendor}=="1038", ATTRS{idProduct}=="229e", MODE="0660", GROUP="audio", TAG+="uaccess"
 KERNEL=="hidraw*", ATTRS{idVendor}=="1038", ATTRS{idProduct}=="229e", MODE="0660", GROUP="audio", TAG+="uaccess"
+
+ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="1038", ATTR{idProduct}=="229e", TEST=="power/control", ATTR{power/control}="on"
 
 # Arctis Nova 7 Diablo IV (Pre-update)
 ATTRS{idVendor}=="1038", ATTRS{idProduct}=="223a", MODE="0660", GROUP="audio", TAG+="uaccess"
 KERNEL=="hidraw*", ATTRS{idVendor}=="1038", ATTRS{idProduct}=="223a", MODE="0660", GROUP="audio", TAG+="uaccess"
 
+ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="1038", ATTR{idProduct}=="223a", TEST=="power/control", ATTR{power/control}="on"
+
 # Arctis Nova 7 Diablo IV (Post-update)
 ATTRS{idVendor}=="1038", ATTRS{idProduct}=="22a9", MODE="0660", GROUP="audio", TAG+="uaccess"
 KERNEL=="hidraw*", ATTRS{idVendor}=="1038", ATTRS{idProduct}=="22a9", MODE="0660", GROUP="audio", TAG+="uaccess"
 
+ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="1038", ATTR{idProduct}=="22a9", TEST=="power/control", ATTR{power/control}="on"
+
 # Arctis Nova 7 WoW Edition
 ATTRS{idVendor}=="1038", ATTRS{idProduct}=="227a", MODE="0660", GROUP="audio", TAG+="uaccess"
 KERNEL=="hidraw*", ATTRS{idVendor}=="1038", ATTRS{idProduct}=="227a", MODE="0660", GROUP="audio", TAG+="uaccess"
+
+ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="1038", ATTR{idProduct}=="227a", TEST=="power/control", ATTR{power/control}="on"
+
