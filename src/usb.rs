@@ -1,39 +1,81 @@
-use crate::device::{HID_MSG_SIZE, SUPPORTED_PRODUCT_IDS, VENDOR_ID};
+use crate::device::{
+    build_sidetone_report, is_supported_device, sidetone_bucket, HID_CLASS_CODE,
+    MAX_VOLUME_PERCENT, SUPPORTED_PRODUCT_IDS, VENDOR_ID,
+};
 use anyhow::{Context, Result};
 use hidapi::HidApi;
 use log::{debug, info};
-use rusb::{DeviceHandle, UsbContext};
+use rusb::{DeviceHandle, Direction, TransferType, UsbContext};
 use std::env;
 use std::time::Duration;
 
+const CLAIM_RETRIES: usize = 5;
+const CLAIM_RETRY_DELAY: Duration = Duration::from_millis(200);
+
+/// Resolves the desired sidetone percentage (`0..=100`) from environment variable values.
+/// Returns `None` if disabled (`ARCTIS_SIDETONE_DISABLE=1`), unset, or invalid.
+pub(crate) fn resolve_sidetone_percent(
+    disable_env: Option<&str>,
+    percent_env: Option<&str>,
+) -> Option<u8> {
+    if disable_env.map(str::trim) == Some("1") {
+        return None;
+    }
+    let raw = percent_env?.trim();
+    let parsed = raw.parse::<u8>().ok()?;
+    Some(parsed.min(MAX_VOLUME_PERCENT))
+}
+
+/// Selects the target `(interface_number, endpoint_address)` from an iterator of
+/// `(interface_number, class_code, interrupt_in_endpoint)` tuples.
+///
+/// Iterates through all descriptors and returns the **last** HID interface
+/// (`class_code == HID_CLASS_CODE`) that has an Interrupt IN endpoint, matching the
+/// composite USB layout of Arctis Nova 7 dongles (e.g. `1038:22a1` exposes HID
+/// interfaces 3, 4, and 5, where interface 5 / `0x86` is the final vendor HID interface).
+pub(crate) fn select_hid_interface<I>(interfaces: I) -> Option<(u8, u8)>
+where
+    I: IntoIterator<Item = (u8, u8, Option<u8>)>,
+{
+    let mut target = None;
+    for (interface_num, class_code, interrupt_in_ep) in interfaces {
+        if class_code == HID_CLASS_CODE {
+            if let Some(endpoint_addr) = interrupt_in_ep {
+                target = Some((interface_num, endpoint_addr));
+            }
+        }
+    }
+    target
+}
+
 /* ---------- hidapi sidetone write ---------- */
 fn try_hidapi_sidetone_from_env() {
-    // Skip sidetone if disabled via ARCTIS_SIDETONE_DISABLE=1
-    if env::var("ARCTIS_SIDETONE_DISABLE").as_deref() == Ok("1") {
+    let disable_env = env::var("ARCTIS_SIDETONE_DISABLE").ok();
+    if disable_env.as_deref().map(str::trim) == Some("1") {
         debug!("Sidetone disabled via ARCTIS_SIDETONE_DISABLE=1, skipping.");
         return;
     }
-    // Read sidetone level from environment variable
-    if let Ok(v) = env::var("ARCTIS_SIDETONE_PERCENT") {
-        if let Ok(num) = v.trim().parse::<u8>() {
-            let _ = hidapi_send_sidetone(num.min(100));
+
+    let percent_env = env::var("ARCTIS_SIDETONE_PERCENT").ok();
+    if let Some(percent) =
+        resolve_sidetone_percent(disable_env.as_deref(), percent_env.as_deref())
+    {
+        if let Err(e) = hidapi_send_sidetone(percent) {
+            debug!("Failed to apply sidetone via hidapi: {}", e);
         }
     }
 }
 
 fn hidapi_send_sidetone(percent: u8) -> Result<()> {
-    let bucket = if percent < 30 { 0x00 } else if percent < 60 { 0x01 } else if percent < 80 { 0x02 } else { 0x03 };
-    let mut data = [0u8; HID_MSG_SIZE];
-    data[0] = 0x00;
-    data[1] = 0x39;
-    data[2] = bucket;
+    let data = build_sidetone_report(percent);
+    let bucket = sidetone_bucket(percent);
 
     let api = HidApi::new()?;
-    // Try to open any of the supported devices
-    let device = SUPPORTED_PRODUCT_IDS.iter().find_map(|&pid| {
-        api.open(VENDOR_ID, pid).ok()
-    }).context("Failed to open any supported Arctis Nova 7 device for sidetone")?;
-    
+    let device = SUPPORTED_PRODUCT_IDS
+        .iter()
+        .find_map(|&pid| api.open(VENDOR_ID, pid).ok())
+        .context("Failed to open any supported Arctis Nova 7 device for sidetone")?;
+
     device.write(&data)?;
     info!("Sidetone updated to bucket {}", bucket);
     Ok(())
@@ -41,31 +83,31 @@ fn hidapi_send_sidetone(percent: u8) -> Result<()> {
 
 /* ---------- USB Finder ---------- */
 pub(crate) fn usb_find_and_open<T: UsbContext>(usb_ctx: &T) -> Result<(DeviceHandle<T>, u8, u8)> {
-    let dev = usb_ctx.devices()?.iter().find(|d| {
-        if let Ok(desc) = d.device_descriptor() {
-            desc.vendor_id() == VENDOR_ID && SUPPORTED_PRODUCT_IDS.contains(&desc.product_id())
-        } else { false }
-    }).ok_or_else(|| anyhow::anyhow!("Arctis Nova 7 not found"))?;
+    let dev = usb_ctx
+        .devices()?
+        .iter()
+        .find(|d| {
+            d.device_descriptor()
+                .map(|desc| is_supported_device(desc.vendor_id(), desc.product_id()))
+                .unwrap_or(false)
+        })
+        .ok_or_else(|| anyhow::anyhow!("Arctis Nova 7 not found"))?;
 
     let config = dev.config_descriptor(0)?;
-    let mut target_interface_num = None;
-    let mut target_endpoint = 0x84u8; // Fallback default
+    let candidates = config.interfaces().filter_map(|interface| {
+        let desc = interface.descriptors().next()?;
+        let interrupt_in_ep = desc
+            .endpoint_descriptors()
+            .find(|endpoint| {
+                endpoint.transfer_type() == TransferType::Interrupt
+                    && endpoint.direction() == Direction::In
+            })
+            .map(|endpoint| endpoint.address());
+        Some((desc.interface_number(), desc.class_code(), interrupt_in_ep))
+    });
 
-    for interface in config.interfaces() {
-        if let Some(desc) = interface.descriptors().next() {
-            if desc.class_code() == 3 { // HID Class
-                for endpoint in desc.endpoint_descriptors() {
-                    if endpoint.transfer_type() == rusb::TransferType::Interrupt && endpoint.direction() == rusb::Direction::In {
-                        target_interface_num = Some(desc.interface_number());
-                        target_endpoint = endpoint.address();
-                        break;
-                    }
-                }
-            }
-        }
-    }
-
-    let interface_num = target_interface_num.ok_or_else(|| anyhow::anyhow!("Could not find HID interface"))?;
+    let (interface_num, target_endpoint) = select_hid_interface(candidates)
+        .ok_or_else(|| anyhow::anyhow!("Could not find HID interface"))?;
     let handle = dev.open().context("Failed to open USB device")?;
 
     try_hidapi_sidetone_from_env();
@@ -77,13 +119,50 @@ pub(crate) fn usb_find_and_open<T: UsbContext>(usb_ctx: &T) -> Result<(DeviceHan
     }
 
     // Claim Interface with Retry
-    const CLAIM_RETRIES: usize = 5;
     for _ in 1..=CLAIM_RETRIES {
         if handle.claim_interface(interface_num).is_ok() {
             return Ok((handle, target_endpoint, interface_num));
         }
-        std::thread::sleep(Duration::from_millis(200));
+        std::thread::sleep(CLAIM_RETRY_DELAY);
     }
 
     Err(anyhow::anyhow!("Failed to claim interface"))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_resolve_sidetone_percent() {
+        assert_eq!(resolve_sidetone_percent(Some("1"), Some("50")), None);
+        assert_eq!(resolve_sidetone_percent(Some(" 1 "), Some("50")), None);
+        assert_eq!(resolve_sidetone_percent(None, None), None);
+        assert_eq!(resolve_sidetone_percent(None, Some("")), None);
+        assert_eq!(resolve_sidetone_percent(None, Some("abc")), None);
+        assert_eq!(resolve_sidetone_percent(None, Some("45")), Some(45));
+        assert_eq!(resolve_sidetone_percent(Some("0"), Some(" 85 ")), Some(85));
+        assert_eq!(resolve_sidetone_percent(None, Some("150")), Some(100));
+    }
+
+    #[test]
+    fn test_select_hid_interface_prefers_last_hid_interface_on_composite_device() {
+        // Real USB descriptor layout from SteelSeries Arctis Nova 7 (1038:22a1):
+        // Interfaces 0..=2: Audio (class 1)
+        // Interface 3: HID (class 3), EP 0x84
+        // Interface 4: HID (class 3), EP 0x85 (Consumer Control)
+        // Interface 5: HID (class 3), EP 0x86 (Vendor HID)
+        let descriptors = vec![
+            (0, 1, None),
+            (1, 1, None),
+            (2, 1, None),
+            (3, 3, Some(0x84)),
+            (4, 3, Some(0x85)),
+            (5, 3, Some(0x86)),
+        ];
+        assert_eq!(select_hid_interface(descriptors), Some((5, 0x86)));
+
+        // Non-HID or HID without Interrupt IN endpoint returns None
+        assert_eq!(select_hid_interface(vec![(0, 1, Some(0x81)), (3, 3, None)]), None);
+    }
 }
