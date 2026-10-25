@@ -1,0 +1,36 @@
+# Maintainer: Melih AK <melihak2467@gmail.com>
+pkgname=arctis-nova-7-chatmix-bin
+_pkgname=arctis-nova-7-chatmix
+pkgver=0.3.0
+pkgrel=1
+pkgdesc="Lightweight Linux PipeWire ChatMix daemon for SteelSeries Arctis Nova 7 headsets (prebuilt binary)"
+arch=('x86_64')
+url="https://github.com/m24ih/Arctis-Nova-7-Chatmix"
+license=('MIT')
+depends=('gcc-libs' 'hidapi' 'libusb' 'pipewire' 'libpulse' 'rtkit')
+provides=('arctis-nova-7-chatmix')
+conflicts=('arctis-nova-7-chatmix')
+install="${pkgname}.install"
+source=(
+  "arctis_chatmix-${pkgver}::${url}/releases/download/v${pkgver}/arctis_chatmix"
+  "${_pkgname}-${pkgver}.tar.gz::${url}/archive/refs/tags/v${pkgver}.tar.gz"
+)
+sha256sums=(
+  'cda870c78401435075cd8df0688c3e49c7b2fbe0e3ff7ba4cd4cc436a3657a26'
+  'd17df61047d1514f7ebbf757beeadb59c28d2cf80c4d2b57937d54324a7c88b1'
+)
+
+package() {
+  install -Dm755 "${srcdir}/arctis_chatmix-${pkgver}" "${pkgdir}/usr/bin/arctis_chatmix"
+
+  cd "Arctis-Nova-7-Chatmix-${pkgver}"
+  install -Dm644 "config/99-arctis.rules" "${pkgdir}/usr/lib/udev/rules.d/99-arctis.rules"
+
+  sed 's|/usr/local/bin/arctis_chatmix|/usr/bin/arctis_chatmix|' \
+    "config/arctis_chatmix.service" > "${srcdir}/arctis_chatmix.service"
+  install -Dm644 "${srcdir}/arctis_chatmix.service" \
+    "${pkgdir}/usr/lib/systemd/user/arctis_chatmix.service"
+
+  install -Dm644 "LICENSE" "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
+  install -Dm644 "README.md" "${pkgdir}/usr/share/doc/${pkgname}/README.md"
+}

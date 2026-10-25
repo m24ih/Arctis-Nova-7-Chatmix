@@ -1,0 +1,22 @@
+pkgbase = arctis-nova-7-chatmix-bin
+	pkgdesc = Lightweight Linux PipeWire ChatMix daemon for SteelSeries Arctis Nova 7 headsets (prebuilt binary)
+	pkgver = 0.3.0
+	pkgrel = 1
+	url = https://github.com/m24ih/Arctis-Nova-7-Chatmix
+	install = arctis-nova-7-chatmix-bin.install
+	arch = x86_64
+	license = MIT
+	depends = gcc-libs
+	depends = hidapi
+	depends = libusb
+	depends = pipewire
+	depends = libpulse
+	depends = rtkit
+	provides = arctis-nova-7-chatmix
+	conflicts = arctis-nova-7-chatmix
+	source = arctis_chatmix-0.3.0::https://github.com/m24ih/Arctis-Nova-7-Chatmix/releases/download/v0.3.0/arctis_chatmix
+	source = arctis-nova-7-chatmix-0.3.0.tar.gz::https://github.com/m24ih/Arctis-Nova-7-Chatmix/archive/refs/tags/v0.3.0.tar.gz
+	sha256sums = cda870c78401435075cd8df0688c3e49c7b2fbe0e3ff7ba4cd4cc436a3657a26
+	sha256sums = d17df61047d1514f7ebbf757beeadb59c28d2cf80c4d2b57937d54324a7c88b1
+
+pkgname = arctis-nova-7-chatmix-bin

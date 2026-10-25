@@ -1,0 +1,15 @@
+post_install() {
+  echo ":: To enable and start the Arctis Nova 7 ChatMix user service, run:"
+  echo "     systemctl --user enable --now arctis_chatmix.service"
+  echo ":: Ensure your user is in the 'audio' group or re-plug the USB receiver so udev rules take effect."
+}
+
+post_upgrade() {
+  echo ":: Reloading user systemd daemon recommended:"
+  echo "     systemctl --user daemon-reload && systemctl --user restart arctis_chatmix.service"
+}
+
+pre_remove() {
+  echo ":: If the user service is active, stop and disable it with:"
+  echo "     systemctl --user disable --now arctis_chatmix.service"
+}
