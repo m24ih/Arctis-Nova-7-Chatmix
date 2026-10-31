@@ -2,7 +2,7 @@
 pkgname=arctis-nova-7-chatmix
 pkgver=0.3.0
 pkgrel=1
-pkgdesc="Lightweight Linux PipeWire ChatMix daemon for SteelSeries Arctis Nova 7 headsets"
+pkgdesc="Linux PipeWire ChatMix, 10-Band DSP EQ & Web Companion daemon for SteelSeries Arctis Nova 7 headsets"
 arch=('x86_64')
 url="https://github.com/m24ih/Arctis-Nova-7-Chatmix"
 license=('MIT')

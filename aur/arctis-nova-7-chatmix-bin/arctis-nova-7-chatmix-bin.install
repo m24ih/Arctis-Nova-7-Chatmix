@@ -1,15 +1,19 @@
 post_install() {
-  echo ":: To enable and start the Arctis Nova 7 ChatMix user service, run:"
+  echo ":: To enable and start the Arctis Nova 7 ChatMix & DSP daemon, run:"
   echo "     systemctl --user enable --now arctis_chatmix.service"
+  echo ":: Configuration & 10-band EQ profiles are stored in: ~/.config/arctis-nova-7/"
+  echo ":: Embedded Web Companion Dashboard is available at:  http://127.0.0.1:3927"
   echo ":: Ensure your user is in the 'audio' group or re-plug the USB receiver so udev rules take effect."
 }
 
 post_upgrade() {
   echo ":: Reloading user systemd daemon recommended:"
   echo "     systemctl --user daemon-reload && systemctl --user restart arctis_chatmix.service"
+  echo ":: Embedded Web Companion Dashboard: http://127.0.0.1:3927"
 }
 
 pre_remove() {
   echo ":: If the user service is active, stop and disable it with:"
   echo "     systemctl --user disable --now arctis_chatmix.service"
 }
+

@@ -111,13 +111,32 @@ run_privileged() {
 IS_TTY=1
 [[ ! -t 0 ]] && IS_TTY=0
 
-# ── Path constants ────────────────────────────────────────────────────────────
+# ── User & Path resolution (handles running via sudo) ─────────────────────────
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REAL_USER="${SUDO_USER:-$(id -un)}"
+REAL_HOME="$(getent passwd "$REAL_USER" 2>/dev/null | cut -d: -f6 || true)"
+[[ -z "$REAL_HOME" ]] && REAL_HOME="$HOME"
+
 SYSTEM_BIN_DIR="/usr/local/bin"
-USER_BIN_DIR="$HOME/.local/bin"
+USER_BIN_DIR="$REAL_HOME/.local/bin"
+if [[ -n "${XDG_CONFIG_HOME:-}" && "$XDG_CONFIG_HOME" != "/root/.config" ]]; then
+  CONFIG_DIR="$XDG_CONFIG_HOME/arctis-nova-7"
+else
+  CONFIG_DIR="$REAL_HOME/.config/arctis-nova-7"
+fi
 SERVICE_NAME="arctis_chatmix.service"
-USER_UNIT_DIR="$HOME/.config/systemd/user"
+USER_UNIT_DIR="$REAL_HOME/.config/systemd/user"
 SYSTEM_UNIT_DIR="/etc/systemd/system"
 UDEV_RULE_PATH="/etc/udev/rules.d/99-arctis.rules"
+WEB_DASHBOARD_URL="http://127.0.0.1:3927"
+
+# All 20 SteelSeries Arctis Nova 7 RX & TX Product IDs (Engine & Companion Database)
+PIDS=(
+  "2200" "2202" "2204" "2206" "2208" "220a"
+  "2238" "223a" "2256" "2258" "2278" "227a"
+  "227c" "227e" "2288" "228a" "229c" "229e"
+  "22a1" "22a9"
+)
 
 # ══════════════════════════════════════════════════════════════════════════════
 # UNINSTALL
@@ -226,6 +245,7 @@ run_uninstall() {
 
   echo ""
   echo "✓ Uninstall complete."
+  echo "  Note: User configuration and EQ profiles in $CONFIG_DIR were preserved."
   echo "  Virtual sinks (Arctis_Game / Arctis_Chat) will disappear"
   echo "  after your PipeWire session restarts or on next login."
 }
@@ -241,20 +261,37 @@ ensure_audio_group() {
 }
 
 add_user_to_audio_group() {
-  local u
-  u="$(id -un)"
+  local u="$REAL_USER"
+  [[ "$u" == "root" ]] && return
   id -nG "$u" | grep -qw audio && return
   echo "Adding user '$u' to audio group (requires sudo)..."
   run_privileged usermod -aG audio "$u"
   echo "IMPORTANT: You must log out and log back in (or reboot)."
 }
 
+init_user_config() {
+  local bin_path="$1"
+  if [[ $EUID -eq 0 && "$REAL_USER" != "root" ]]; then
+    sudo -u "$REAL_USER" HOME="$REAL_HOME" mkdir -p "$CONFIG_DIR/profiles"
+    if [[ -x "$bin_path" ]]; then
+      sudo -u "$REAL_USER" HOME="$REAL_HOME" "$bin_path" --init-config 2>/dev/null || true
+    fi
+  else
+    mkdir -p "$CONFIG_DIR/profiles"
+    if [[ -x "$bin_path" ]]; then
+      "$bin_path" --init-config 2>/dev/null || true
+    fi
+  fi
+}
+
 install_user() {
   mkdir -p "$USER_BIN_DIR" "$USER_UNIT_DIR"
   install -m 755 "$BINARY" "$USER_BIN_DIR/arctis_chatmix"
+  init_user_config "$USER_BIN_DIR/arctis_chatmix"
   cat >"${USER_UNIT_DIR}/${SERVICE_NAME}" <<'UNIT'
 [Unit]
-Description=Arctis Nova 7 ChatMix (virtual-sink mixer)
+Description=Arctis Nova 7 ChatMix, 10-Band DSP EQ & Web Companion Service
+Documentation=https://github.com/m24ih/Arctis-Nova-7-Chatmix
 Wants=pipewire.service
 After=pipewire.service
 [Service]
@@ -266,21 +303,26 @@ RestartSec=5
 [Install]
 WantedBy=default.target
 UNIT
-  systemctl --user daemon-reload
+  if [[ $EUID -eq 0 && "$REAL_USER" != "root" ]]; then
+    chown -R "$REAL_USER":"$(id -gn "$REAL_USER")" "$USER_BIN_DIR/arctis_chatmix" "${USER_UNIT_DIR}/${SERVICE_NAME}" 2>/dev/null || true
+  fi
+  systemctl --user daemon-reload 2>/dev/null || true
   [[ "$ENABLE_SERVICE" == "yes" ]] && systemctl --user enable --now "$SERVICE_NAME" || true
   [[ "$ENABLE_LINGER" == "yes" ]] &&
-    run_privileged loginctl enable-linger "$(id -un)" || true
+    run_privileged loginctl enable-linger "$REAL_USER" || true
 }
 
 install_system() {
   echo "Installing system-wide (requires sudo)..."
   run_privileged install -m 755 "${BINARY}" "${SYSTEM_BIN_DIR}/arctis_chatmix"
   echo "Binary installed to ${SYSTEM_BIN_DIR}/arctis_chatmix"
+  init_user_config "${SYSTEM_BIN_DIR}/arctis_chatmix"
 
   local unit_content
   read -r -d '' unit_content <<'UNIT' || true
 [Unit]
-Description=Arctis Nova 7 ChatMix (virtual-sink mixer)
+Description=Arctis Nova 7 ChatMix, 10-Band DSP EQ & Web Companion Service
+Documentation=https://github.com/m24ih/Arctis-Nova-7-Chatmix
 Wants=pipewire.service
 After=pipewire.service
 [Service]
@@ -305,19 +347,24 @@ install_udev() {
     return
   fi
   echo "Installing udev rule (requires sudo)..."
-  # Supported Product IDs
-  PIDS=("2202" "22a1" "227e" "2206" "2258" "229e" "223a" "22a9" "227a")
-  UDEV_CONTENT=""
-  for pid in "${PIDS[@]}"; do
-    UDEV_CONTENT+='ATTRS{idVendor}=="1038", ATTRS{idProduct}=="'"$pid"'", MODE="0660", GROUP="audio", TAG+="uaccess"
+  if [[ -f "${SCRIPT_DIR}/config/99-arctis.rules" ]]; then
+    run_privileged install -Dm644 "${SCRIPT_DIR}/config/99-arctis.rules" "${UDEV_RULE_PATH}"
+  elif [[ -f "./config/99-arctis.rules" ]]; then
+    run_privileged install -Dm644 "./config/99-arctis.rules" "${UDEV_RULE_PATH}"
+  else
+    UDEV_CONTENT=""
+    for pid in "${PIDS[@]}"; do
+      UDEV_CONTENT+='ATTRS{idVendor}=="1038", ATTRS{idProduct}=="'"$pid"'", MODE="0660", GROUP="audio", TAG+="uaccess"
 KERNEL=="hidraw*", ATTRS{idVendor}=="1038", ATTRS{idProduct}=="'"$pid"'", MODE="0660", GROUP="audio", TAG+="uaccess"
 ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="1038", ATTR{idProduct}=="'"$pid"'", TEST=="power/control", ATTR{power/control}="on"
 '
-  done
-  echo "$UDEV_CONTENT" | run_privileged tee "${UDEV_RULE_PATH}" >/dev/null
+    done
+    echo "$UDEV_CONTENT" | run_privileged tee "${UDEV_RULE_PATH}" >/dev/null
+  fi
   run_privileged udevadm control --reload
   for pid in "${PIDS[@]}"; do
     run_privileged udevadm trigger --subsystem-match=usb --attr-match=idVendor=1038 --attr-match=idProduct="$pid" || true
+    run_privileged udevadm trigger --subsystem-match=hidraw --attr-match=idVendor=1038 --attr-match=idProduct="$pid" 2>/dev/null || true
   done
   echo "udev rule installed to ${UDEV_RULE_PATH}"
   echo "Make sure your user is in the 'audio' group (sudo usermod -aG audio <user>) and re-login."
@@ -349,10 +396,15 @@ install_rtkit() {
 run_install() {
   echo "== arctis_chatmix installer =="
 
+  # Auto-detect cargo release binary if default ./arctis_chatmix is missing
+  if [[ "$BINARY" == "./arctis_chatmix" && ! -f "$BINARY" && -f "${SCRIPT_DIR}/target/release/arctis_chatmix" ]]; then
+    BINARY="${SCRIPT_DIR}/target/release/arctis_chatmix"
+  fi
+
   if [[ $IS_TTY -eq 1 && "$SKIP_CONFIRM" != "yes" ]]; then
     read -r -p "Path to binary [$BINARY]: " in || exit 1
     BINARY="${in:-$BINARY}"
-    [[ ! -f "$BINARY" ]] && echo "Binary not found." && exit 2
+    [[ ! -f "$BINARY" ]] && echo "Binary not found: $BINARY" && exit 2
     read -r -p "Install mode - user or system [$MODE]: " in || exit 1
     MODE="${in:-$MODE}"
     INSTALL_UDEV=$(ask_yes_no "Install udev rule?" "$INSTALL_UDEV")
@@ -362,17 +414,25 @@ run_install() {
     [[ "$(ask_yes_no "Proceed?" yes)" != "yes" ]] && exit 0
   fi
 
+  if [[ ! -f "$BINARY" ]]; then
+    echo "Binary not found: $BINARY"
+    exit 2
+  fi
+
   if [[ "$MODE" == "user" ]]; then
     install_user
   else
     install_system
   fi
   ensure_audio_group   || echo "[warn] Could not ensure audio group (run manually: sudo groupadd -r audio)"
-  add_user_to_audio_group || echo "[warn] Could not add user to audio group (run manually: sudo usermod -aG audio $(id -un))"
+  add_user_to_audio_group || echo "[warn] Could not add user to audio group (run manually: sudo usermod -aG audio $REAL_USER)"
   install_udev
   install_rtkit
-  echo "Installation complete."
-  echo "If audio group was modified: LOG OUT and LOG BACK IN."
+  echo ""
+  echo "✓ Installation complete."
+  echo "  • Config & EQ Profiles: $CONFIG_DIR"
+  echo "  • Web Companion UI:     $WEB_DASHBOARD_URL"
+  echo "  • If audio group was modified: LOG OUT and LOG BACK IN."
 }
 
 # ── Entry point ───────────────────────────────────────────────────────────────
@@ -381,3 +441,4 @@ if [[ "$UNINSTALL" == "yes" ]]; then
 else
   run_install
 fi
+

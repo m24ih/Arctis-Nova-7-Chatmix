@@ -56,47 +56,58 @@ KERNEL=="hidraw*", ATTRS{idVendor}=="1038", ATTRS{idProduct}=="227a", MODE="0660
 ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="1038", ATTR{idProduct}=="227a", TEST=="power/control", ATTR{power/control}="on"
 
 # Arctis Nova 7P / 7X / Gen 2 RX & TX Variants (Engine & Companion Database)
+
+# Arctis Nova 7 Headset / RX (0x2200)
 ATTRS{idVendor}=="1038", ATTRS{idProduct}=="2200", MODE="0660", GROUP="audio", TAG+="uaccess"
 KERNEL=="hidraw*", ATTRS{idVendor}=="1038", ATTRS{idProduct}=="2200", MODE="0660", GROUP="audio", TAG+="uaccess"
 ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="1038", ATTR{idProduct}=="2200", TEST=="power/control", ATTR{power/control}="on"
 
+# Arctis Nova 7X Headset / RX (0x2204)
 ATTRS{idVendor}=="1038", ATTRS{idProduct}=="2204", MODE="0660", GROUP="audio", TAG+="uaccess"
 KERNEL=="hidraw*", ATTRS{idVendor}=="1038", ATTRS{idProduct}=="2204", MODE="0660", GROUP="audio", TAG+="uaccess"
 ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="1038", ATTR{idProduct}=="2204", TEST=="power/control", ATTR{power/control}="on"
 
+# Arctis Nova 7P Headset / RX (0x2208)
 ATTRS{idVendor}=="1038", ATTRS{idProduct}=="2208", MODE="0660", GROUP="audio", TAG+="uaccess"
 KERNEL=="hidraw*", ATTRS{idVendor}=="1038", ATTRS{idProduct}=="2208", MODE="0660", GROUP="audio", TAG+="uaccess"
 ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="1038", ATTR{idProduct}=="2208", TEST=="power/control", ATTR{power/control}="on"
 
+# Arctis Nova 7P TX (0x220a)
 ATTRS{idVendor}=="1038", ATTRS{idProduct}=="220a", MODE="0660", GROUP="audio", TAG+="uaccess"
 KERNEL=="hidraw*", ATTRS{idVendor}=="1038", ATTRS{idProduct}=="220a", MODE="0660", GROUP="audio", TAG+="uaccess"
 ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="1038", ATTR{idProduct}=="220a", TEST=="power/control", ATTR{power/control}="on"
 
+# Arctis Nova 7 Diablo IV RX (0x2238)
 ATTRS{idVendor}=="1038", ATTRS{idProduct}=="2238", MODE="0660", GROUP="audio", TAG+="uaccess"
 KERNEL=="hidraw*", ATTRS{idVendor}=="1038", ATTRS{idProduct}=="2238", MODE="0660", GROUP="audio", TAG+="uaccess"
 ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="1038", ATTR{idProduct}=="2238", TEST=="power/control", ATTR{power/control}="on"
 
+# Arctis Nova 7X White RX (0x2256)
 ATTRS{idVendor}=="1038", ATTRS{idProduct}=="2256", MODE="0660", GROUP="audio", TAG+="uaccess"
 KERNEL=="hidraw*", ATTRS{idVendor}=="1038", ATTRS{idProduct}=="2256", MODE="0660", GROUP="audio", TAG+="uaccess"
 ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="1038", ATTR{idProduct}=="2256", TEST=="power/control", ATTR{power/control}="on"
 
+# Arctis Nova 7 WoW Edition RX (0x2278)
 ATTRS{idVendor}=="1038", ATTRS{idProduct}=="2278", MODE="0660", GROUP="audio", TAG+="uaccess"
 KERNEL=="hidraw*", ATTRS{idVendor}=="1038", ATTRS{idProduct}=="2278", MODE="0660", GROUP="audio", TAG+="uaccess"
 ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="1038", ATTR{idProduct}=="2278", TEST=="power/control", ATTR{power/control}="on"
 
+# Arctis Nova 7 Gen 2 RX - brisket_rx (0x227c)
 ATTRS{idVendor}=="1038", ATTRS{idProduct}=="227c", MODE="0660", GROUP="audio", TAG+="uaccess"
 KERNEL=="hidraw*", ATTRS{idVendor}=="1038", ATTRS{idProduct}=="227c", MODE="0660", GROUP="audio", TAG+="uaccess"
 ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="1038", ATTR{idProduct}=="227c", TEST=="power/control", ATTR{power/control}="on"
 
+# Arctis Nova 7P Gen 2 RX - brisket_ps_rx (0x2288)
 ATTRS{idVendor}=="1038", ATTRS{idProduct}=="2288", MODE="0660", GROUP="audio", TAG+="uaccess"
 KERNEL=="hidraw*", ATTRS{idVendor}=="1038", ATTRS{idProduct}=="2288", MODE="0660", GROUP="audio", TAG+="uaccess"
 ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="1038", ATTR{idProduct}=="2288", TEST=="power/control", ATTR{power/control}="on"
 
+# Arctis Nova 7P Gen 2 TX - brisket_ps_tx (0x228a)
 ATTRS{idVendor}=="1038", ATTRS{idProduct}=="228a", MODE="0660", GROUP="audio", TAG+="uaccess"
 KERNEL=="hidraw*", ATTRS{idVendor}=="1038", ATTRS{idProduct}=="228a", MODE="0660", GROUP="audio", TAG+="uaccess"
 ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="1038", ATTR{idProduct}=="228a", TEST=="power/control", ATTR{power/control}="on"
 
+# Arctis Nova 7X Gen 2 RX - brisket_xbox_rx (0x229c)
 ATTRS{idVendor}=="1038", ATTRS{idProduct}=="229c", MODE="0660", GROUP="audio", TAG+="uaccess"
 KERNEL=="hidraw*", ATTRS{idVendor}=="1038", ATTRS{idProduct}=="229c", MODE="0660", GROUP="audio", TAG+="uaccess"
 ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="1038", ATTR{idProduct}=="229c", TEST=="power/control", ATTR{power/control}="on"
-

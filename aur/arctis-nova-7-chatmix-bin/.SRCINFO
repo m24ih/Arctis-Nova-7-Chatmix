@@ -1,5 +1,5 @@
 pkgbase = arctis-nova-7-chatmix-bin
-	pkgdesc = Lightweight Linux PipeWire ChatMix daemon for SteelSeries Arctis Nova 7 headsets (prebuilt binary)
+	pkgdesc = Linux PipeWire ChatMix, 10-Band DSP EQ & Web Companion daemon for SteelSeries Arctis Nova 7 headsets (prebuilt binary)
 	pkgver = 0.3.0
 	pkgrel = 1
 	url = https://github.com/m24ih/Arctis-Nova-7-Chatmix
