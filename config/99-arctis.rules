@@ -55,3 +55,48 @@ KERNEL=="hidraw*", ATTRS{idVendor}=="1038", ATTRS{idProduct}=="227a", MODE="0660
 
 ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="1038", ATTR{idProduct}=="227a", TEST=="power/control", ATTR{power/control}="on"
 
+# Arctis Nova 7P / 7X / Gen 2 RX & TX Variants (Engine & Companion Database)
+ATTRS{idVendor}=="1038", ATTRS{idProduct}=="2200", MODE="0660", GROUP="audio", TAG+="uaccess"
+KERNEL=="hidraw*", ATTRS{idVendor}=="1038", ATTRS{idProduct}=="2200", MODE="0660", GROUP="audio", TAG+="uaccess"
+ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="1038", ATTR{idProduct}=="2200", TEST=="power/control", ATTR{power/control}="on"
+
+ATTRS{idVendor}=="1038", ATTRS{idProduct}=="2204", MODE="0660", GROUP="audio", TAG+="uaccess"
+KERNEL=="hidraw*", ATTRS{idVendor}=="1038", ATTRS{idProduct}=="2204", MODE="0660", GROUP="audio", TAG+="uaccess"
+ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="1038", ATTR{idProduct}=="2204", TEST=="power/control", ATTR{power/control}="on"
+
+ATTRS{idVendor}=="1038", ATTRS{idProduct}=="2208", MODE="0660", GROUP="audio", TAG+="uaccess"
+KERNEL=="hidraw*", ATTRS{idVendor}=="1038", ATTRS{idProduct}=="2208", MODE="0660", GROUP="audio", TAG+="uaccess"
+ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="1038", ATTR{idProduct}=="2208", TEST=="power/control", ATTR{power/control}="on"
+
+ATTRS{idVendor}=="1038", ATTRS{idProduct}=="220a", MODE="0660", GROUP="audio", TAG+="uaccess"
+KERNEL=="hidraw*", ATTRS{idVendor}=="1038", ATTRS{idProduct}=="220a", MODE="0660", GROUP="audio", TAG+="uaccess"
+ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="1038", ATTR{idProduct}=="220a", TEST=="power/control", ATTR{power/control}="on"
+
+ATTRS{idVendor}=="1038", ATTRS{idProduct}=="2238", MODE="0660", GROUP="audio", TAG+="uaccess"
+KERNEL=="hidraw*", ATTRS{idVendor}=="1038", ATTRS{idProduct}=="2238", MODE="0660", GROUP="audio", TAG+="uaccess"
+ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="1038", ATTR{idProduct}=="2238", TEST=="power/control", ATTR{power/control}="on"
+
+ATTRS{idVendor}=="1038", ATTRS{idProduct}=="2256", MODE="0660", GROUP="audio", TAG+="uaccess"
+KERNEL=="hidraw*", ATTRS{idVendor}=="1038", ATTRS{idProduct}=="2256", MODE="0660", GROUP="audio", TAG+="uaccess"
+ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="1038", ATTR{idProduct}=="2256", TEST=="power/control", ATTR{power/control}="on"
+
+ATTRS{idVendor}=="1038", ATTRS{idProduct}=="2278", MODE="0660", GROUP="audio", TAG+="uaccess"
+KERNEL=="hidraw*", ATTRS{idVendor}=="1038", ATTRS{idProduct}=="2278", MODE="0660", GROUP="audio", TAG+="uaccess"
+ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="1038", ATTR{idProduct}=="2278", TEST=="power/control", ATTR{power/control}="on"
+
+ATTRS{idVendor}=="1038", ATTRS{idProduct}=="227c", MODE="0660", GROUP="audio", TAG+="uaccess"
+KERNEL=="hidraw*", ATTRS{idVendor}=="1038", ATTRS{idProduct}=="227c", MODE="0660", GROUP="audio", TAG+="uaccess"
+ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="1038", ATTR{idProduct}=="227c", TEST=="power/control", ATTR{power/control}="on"
+
+ATTRS{idVendor}=="1038", ATTRS{idProduct}=="2288", MODE="0660", GROUP="audio", TAG+="uaccess"
+KERNEL=="hidraw*", ATTRS{idVendor}=="1038", ATTRS{idProduct}=="2288", MODE="0660", GROUP="audio", TAG+="uaccess"
+ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="1038", ATTR{idProduct}=="2288", TEST=="power/control", ATTR{power/control}="on"
+
+ATTRS{idVendor}=="1038", ATTRS{idProduct}=="228a", MODE="0660", GROUP="audio", TAG+="uaccess"
+KERNEL=="hidraw*", ATTRS{idVendor}=="1038", ATTRS{idProduct}=="228a", MODE="0660", GROUP="audio", TAG+="uaccess"
+ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="1038", ATTR{idProduct}=="228a", TEST=="power/control", ATTR{power/control}="on"
+
+ATTRS{idVendor}=="1038", ATTRS{idProduct}=="229c", MODE="0660", GROUP="audio", TAG+="uaccess"
+KERNEL=="hidraw*", ATTRS{idVendor}=="1038", ATTRS{idProduct}=="229c", MODE="0660", GROUP="audio", TAG+="uaccess"
+ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="1038", ATTR{idProduct}=="229c", TEST=="power/control", ATTR{power/control}="on"
+

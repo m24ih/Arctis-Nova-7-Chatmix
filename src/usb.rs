@@ -1,9 +1,16 @@
+use crate::config::AppConfig;
 use crate::device::{
-    build_sidetone_report, is_supported_device, sidetone_bucket, HID_CLASS_CODE,
-    MAX_VOLUME_PERCENT, SUPPORTED_PRODUCT_IDS, VENDOR_ID,
+    build_bt_call_behavior_report, build_bt_power_default_report, build_inactivity_timer_report,
+    build_mic_gain_report, build_mute_led_brightness_report, build_save_to_flash_report,
+    build_sidetone_level_report, build_sidetone_report, build_status_request_report,
+    build_volume_limiter_report, is_percentage_battery_device, is_supported_device,
+    sidetone_bucket, HID_CLASS_CODE, HID_MSG_SIZE, MAX_VOLUME_PERCENT, SUPPORTED_PRODUCT_IDS,
+    VENDOR_ID,
 };
+use crate::eq::ParametricEqProfile;
+use crate::telemetry::{parse_telemetry_event, TelemetryEvent};
 use anyhow::{Context, Result};
-use hidapi::HidApi;
+use hidapi::{HidApi, HidDevice};
 use log::{debug, info};
 use rusb::{DeviceHandle, Direction, TransferType, UsbContext};
 use std::env;
@@ -11,6 +18,7 @@ use std::time::Duration;
 
 const CLAIM_RETRIES: usize = 5;
 const CLAIM_RETRY_DELAY: Duration = Duration::from_millis(200);
+const HID_INTER_CMD_DELAY: Duration = Duration::from_millis(15);
 
 /// Resolves the desired sidetone percentage (`0..=100`) from environment variable values.
 /// Returns `None` if disabled (`ARCTIS_SIDETONE_DISABLE=1`), unset, or invalid.
@@ -48,6 +56,138 @@ where
     target
 }
 
+/// Opens the first connected supported Arctis Nova 7 HID device via `hidapi` and returns `(HidDevice, product_id)`.
+pub(crate) fn open_hidapi_device() -> Result<(HidDevice, u16)> {
+    let api = HidApi::new().context("Failed to initialize HidApi")?;
+    for &pid in SUPPORTED_PRODUCT_IDS {
+        if let Ok(dev) = api.open(VENDOR_ID, pid) {
+            return Ok((dev, pid));
+        }
+    }
+    Err(anyhow::anyhow!(
+        "Failed to open any supported Arctis Nova 7 device via hidapi"
+    ))
+}
+
+/// Sends a single 64-byte HID command report to the headset via `hidapi`.
+pub(crate) fn hidapi_send_report(report: &[u8; HID_MSG_SIZE]) -> Result<()> {
+    let (device, _pid) = open_hidapi_device()?;
+    device.write(report).context("hidapi write failed")?;
+    Ok(())
+}
+
+/// Sends multiple 64-byte HID command reports sequentially over a single `hidapi` handle.
+pub(crate) fn hidapi_send_reports(reports: &[[u8; HID_MSG_SIZE]]) -> Result<()> {
+    let (device, _pid) = open_hidapi_device()?;
+    for (idx, report) in reports.iter().enumerate() {
+        device
+            .write(report)
+            .with_context(|| format!("hidapi write failed on report #{}", idx + 1))?;
+        if idx + 1 < reports.len() {
+            std::thread::sleep(HID_INTER_CMD_DELAY);
+        }
+    }
+    Ok(())
+}
+
+/// Requests general headset status (`0xB0`) via `hidapi` and attempts a non-blocking/short read
+/// if the response is delivered on the same handle.
+pub(crate) fn hidapi_request_status() -> Result<Option<TelemetryEvent>> {
+    let (device, pid) = open_hidapi_device()?;
+    let req = build_status_request_report();
+    device
+        .write(&req)
+        .context("Failed to write 0xB0 status request")?;
+
+    let mut buf = [0u8; HID_MSG_SIZE];
+    if let Ok(len) = device.read_timeout(&mut buf, 120) {
+        if len > 0 {
+            return Ok(parse_telemetry_event(
+                &buf[..len],
+                is_percentage_battery_device(pid),
+            ));
+        }
+    }
+    Ok(None)
+}
+
+/// Persists current DSP and hardware settings to headset onboard flash (`0x09`).
+pub(crate) fn hidapi_save_to_flash() -> Result<()> {
+    let report = build_save_to_flash_report();
+    hidapi_send_report(&report)?;
+    info!("Saved active hardware & EQ configuration to headset flash (0x09)");
+    Ok(())
+}
+
+/// Applies all configured hardware controls (`0x37`, `0x39`, `0x3A`, `0xA3`, `0xAE`, `0xB2`, `0xB3`),
+/// the active 10-band Parametric EQ profile (`0x33`), and optional flash save (`0x09`).
+pub(crate) fn hidapi_apply_config_and_eq(
+    config: &AppConfig,
+    eq_profile: Option<&ParametricEqProfile>,
+    force_flash: bool,
+) -> Result<()> {
+    let mut reports: Vec<[u8; HID_MSG_SIZE]> = Vec::with_capacity(10);
+
+    // 1. Sidetone (env var overrides config.toml if ARCTIS_SIDETONE_PERCENT / DISABLE is set)
+    let disable_env = env::var("ARCTIS_SIDETONE_DISABLE").ok();
+    let percent_env = env::var("ARCTIS_SIDETONE_PERCENT").ok();
+    if disable_env.as_deref().map(str::trim) == Some("1") {
+        debug!("Sidetone disabled via ARCTIS_SIDETONE_DISABLE=1");
+    } else if let Some(percent) =
+        resolve_sidetone_percent(disable_env.as_deref(), percent_env.as_deref())
+    {
+        reports.push(build_sidetone_report(percent));
+    } else if config.hardware.sidetone_enabled {
+        reports.push(build_sidetone_level_report(config.hardware.sidetone_level));
+    } else {
+        reports.push(build_sidetone_level_report(0));
+    }
+
+    // 2. Microphone gain (0x37)
+    reports.push(build_mic_gain_report(config.hardware.mic_gain));
+
+    // 3. Volume limiter (0x3A)
+    reports.push(build_volume_limiter_report(config.hardware.volume_limiter));
+
+    // 4. Inactivity timer (0xA3)
+    reports.push(build_inactivity_timer_report(
+        config.hardware.inactivity_timer_mins,
+    ));
+
+    // 5. Mute LED brightness (0xAE)
+    reports.push(build_mute_led_brightness_report(
+        config.hardware.mute_led_brightness,
+    ));
+
+    // 6. Bluetooth power-on default (0xB2) & call behavior (0xB3)
+    reports.push(build_bt_power_default_report(
+        config.hardware.bt_power_on_default,
+    ));
+    reports.push(build_bt_call_behavior_report(
+        config.hardware.bt_call_behavior,
+    ));
+
+    // 7. 10-band Parametric EQ (0x33)
+    if let Some(profile) = eq_profile {
+        reports.push(profile.build_hid_report());
+        info!(
+            "Applying 10-band EQ profile '{}' ({})",
+            profile.name, profile.description
+        );
+    }
+
+    // 8. Initial 0xB0 status request so telemetry populates immediately
+    reports.push(build_status_request_report());
+
+    // 9. Persistent flash save (0x09) if enabled in config or explicitly requested
+    if config.save_to_flash || force_flash {
+        reports.push(build_save_to_flash_report());
+    }
+
+    hidapi_send_reports(&reports)?;
+    Ok(())
+}
+
 /* ---------- hidapi sidetone write ---------- */
 fn try_hidapi_sidetone_from_env() {
     let disable_env = env::var("ARCTIS_SIDETONE_DISABLE").ok();
@@ -66,29 +206,69 @@ fn try_hidapi_sidetone_from_env() {
     }
 }
 
-fn hidapi_send_sidetone(percent: u8) -> Result<()> {
+pub(crate) fn hidapi_send_sidetone(percent: u8) -> Result<()> {
     let data = build_sidetone_report(percent);
     let bucket = sidetone_bucket(percent);
-
-    let api = HidApi::new()?;
-    let device = SUPPORTED_PRODUCT_IDS
-        .iter()
-        .find_map(|&pid| api.open(VENDOR_ID, pid).ok())
-        .context("Failed to open any supported Arctis Nova 7 device for sidetone")?;
-
-    device.write(&data)?;
+    hidapi_send_report(&data)?;
     info!("Sidetone updated to bucket {}", bucket);
     Ok(())
 }
 
+/* ---------- rusb HID Control Transfer ---------- */
+/// Sends a 64-byte HID command report over an already-claimed `rusb::DeviceHandle`
+/// using USB HID Class `SET_REPORT` (`bmRequestType = 0x21`, `bRequest = 0x09`, `wValue = 0x0200`).
+pub(crate) fn rusb_send_hid_report<T: UsbContext>(
+    handle: &DeviceHandle<T>,
+    interface_num: u8,
+    report: &[u8; HID_MSG_SIZE],
+) -> Result<()> {
+    // Strip leading 0x00 report ID byte when sending via control transfer wValue=0x0200
+    let payload = if report[0] == 0x00 {
+        &report[1..]
+    } else {
+        &report[..]
+    };
+    handle
+        .write_control(
+            0x21,
+            0x09,
+            0x0200,
+            u16::from(interface_num),
+            payload,
+            Duration::from_millis(250),
+        )
+        .context("rusb HID SET_REPORT control transfer failed")?;
+    Ok(())
+}
+
+/// Sends a `0xB0` general status query over an active `rusb::DeviceHandle`.
+/// The response arrives asynchronously in `read_loop` via `read_interrupt`.
+pub(crate) fn rusb_request_status<T: UsbContext>(
+    handle: &DeviceHandle<T>,
+    interface_num: u8,
+) -> Result<()> {
+    let req = build_status_request_report();
+    rusb_send_hid_report(handle, interface_num, &req)
+}
+
 /* ---------- USB Finder ---------- */
-pub(crate) fn usb_find_and_open<T: UsbContext>(usb_ctx: &T) -> Result<(DeviceHandle<T>, u8, u8)> {
+pub(crate) fn usb_find_and_open<T: UsbContext>(
+    usb_ctx: &T,
+    startup_config: Option<(&AppConfig, Option<&ParametricEqProfile>)>,
+) -> Result<(DeviceHandle<T>, u8, u8, u16)> {
+    let mut matched_pid = 0u16;
     let dev = usb_ctx
         .devices()?
         .iter()
         .find(|d| {
             d.device_descriptor()
-                .map(|desc| is_supported_device(desc.vendor_id(), desc.product_id()))
+                .map(|desc| {
+                    let ok = is_supported_device(desc.vendor_id(), desc.product_id());
+                    if ok {
+                        matched_pid = desc.product_id();
+                    }
+                    ok
+                })
                 .unwrap_or(false)
         })
         .ok_or_else(|| anyhow::anyhow!("Arctis Nova 7 not found"))?;
@@ -110,7 +290,19 @@ pub(crate) fn usb_find_and_open<T: UsbContext>(usb_ctx: &T) -> Result<(DeviceHan
         .ok_or_else(|| anyhow::anyhow!("Could not find HID interface"))?;
     let handle = dev.open().context("Failed to open USB device")?;
 
-    try_hidapi_sidetone_from_env();
+    // Apply XDG hardware config + 10-band EQ via hidapi while hidraw is still attached
+    if let Some((app_cfg, eq_prof)) = startup_config {
+        if app_cfg.auto_apply_on_connect {
+            if let Err(e) = hidapi_apply_config_and_eq(app_cfg, eq_prof, false) {
+                debug!("Failed to auto-apply config/EQ via hidapi: {}", e);
+                try_hidapi_sidetone_from_env();
+            }
+        } else {
+            try_hidapi_sidetone_from_env();
+        }
+    } else {
+        try_hidapi_sidetone_from_env();
+    }
 
     // Kernel Driver Detach
     let _ = handle.set_auto_detach_kernel_driver(true);
@@ -121,7 +313,7 @@ pub(crate) fn usb_find_and_open<T: UsbContext>(usb_ctx: &T) -> Result<(DeviceHan
     // Claim Interface with Retry
     for _ in 1..=CLAIM_RETRIES {
         if handle.claim_interface(interface_num).is_ok() {
-            return Ok((handle, target_endpoint, interface_num));
+            return Ok((handle, target_endpoint, interface_num, matched_pid));
         }
         std::thread::sleep(CLAIM_RETRY_DELAY);
     }

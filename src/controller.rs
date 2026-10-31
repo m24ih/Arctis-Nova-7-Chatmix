@@ -2,11 +2,14 @@ use crate::audio::{
     create_virtual_sink, destroy_virtual_sinks, find_arctis_sink, get_default_sink,
     link_sink_to_device, move_all_inputs_to, set_default_sink, set_sink_volume,
 };
+use crate::config::{AppConfig, ConfigManager};
 use crate::device::{
-    parse_chatmix_report, CHAT_SINK_DESC, CHAT_SINK_NAME, FALLBACK_DEFAULT_SINK, GAME_SINK_DESC,
-    GAME_SINK_NAME, HID_MSG_SIZE,
+    is_percentage_battery_device, parse_chatmix_report, CHAT_SINK_DESC, CHAT_SINK_NAME,
+    FALLBACK_DEFAULT_SINK, GAME_SINK_DESC, GAME_SINK_NAME, HID_MSG_SIZE, VENDOR_ID,
 };
-use crate::usb::usb_find_and_open;
+use crate::eq::ParametricEqProfile;
+use crate::telemetry::{parse_telemetry_event, HeadsetTelemetry, TelemetryEvent};
+use crate::usb::{rusb_request_status, usb_find_and_open};
 use anyhow::{Context, Result};
 use log::{debug, error, info, warn};
 use rusb::{DeviceHandle, UsbContext};
@@ -14,7 +17,7 @@ use std::sync::{
     atomic::{AtomicBool, Ordering},
     Arc,
 };
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 const MAX_CONSECUTIVE_USB_ERRORS: u32 = 5;
 const RELINK_RETRIES: usize = 10;
@@ -51,6 +54,9 @@ pub(crate) struct ArctisController {
     original_default_sink: String,
     running: Arc<AtomicBool>,
     sinks_created: Arc<AtomicBool>,
+    config_manager: ConfigManager,
+    config: AppConfig,
+    active_eq: Option<ParametricEqProfile>,
 }
 
 impl ArctisController {
@@ -58,6 +64,38 @@ impl ArctisController {
         let original_default_sink =
             get_default_sink().unwrap_or_else(|_| FALLBACK_DEFAULT_SINK.to_string());
         info!("Original default sink: {}", original_default_sink);
+
+        let config_manager = ConfigManager::new();
+        if let Err(e) = config_manager.ensure_initialized() {
+            warn!(
+                "Could not initialize XDG config directory '{}': {}",
+                config_manager.base_dir().display(),
+                e
+            );
+        }
+
+        let config = config_manager.load_config().unwrap_or_else(|e| {
+            warn!("Failed to load config.toml, using defaults: {}", e);
+            AppConfig::default()
+        });
+
+        let active_eq = match config_manager.load_profile(&config.active_profile) {
+            Ok(profile) => {
+                info!(
+                    "Loaded active 10-band EQ profile '{}' from {}",
+                    profile.name,
+                    config_manager.base_dir().display()
+                );
+                Some(profile)
+            }
+            Err(e) => {
+                warn!(
+                    "Failed to load EQ profile '{}': {}. Falling back to Harman preset.",
+                    config.active_profile, e
+                );
+                Some(ParametricEqProfile::harman())
+            }
+        };
 
         let running = Arc::new(AtomicBool::new(true));
         let r = running.clone();
@@ -71,6 +109,9 @@ impl ArctisController {
             original_default_sink,
             running,
             sinks_created: Arc::new(AtomicBool::new(false)),
+            config_manager,
+            config,
+            active_eq,
         })
     }
 
@@ -127,7 +168,7 @@ impl ArctisController {
             }
         }
 
-        // 2. Start USB connection and ChatMix read loop
+        // 2. Start USB connection and ChatMix + Telemetry read loop
         loop {
             if !self.running.load(Ordering::SeqCst) {
                 break;
@@ -157,12 +198,29 @@ impl ArctisController {
         let usb_ctx = rusb::Context::new().context("Failed to initialize libusb context")?;
 
         while self.running.load(Ordering::SeqCst) {
-            match usb_find_and_open(&usb_ctx) {
-                Ok((mut handle, endpoint, interface_num)) => {
+            // Reload config & active EQ profile on each connection attempt in case user edited TOML files
+            let latest_cfg = self
+                .config_manager
+                .load_config()
+                .unwrap_or_else(|_| self.config.clone());
+            let latest_eq = self
+                .config_manager
+                .load_profile(&latest_cfg.active_profile)
+                .ok()
+                .or_else(|| self.active_eq.clone());
+
+            match usb_find_and_open(&usb_ctx, Some((&latest_cfg, latest_eq.as_ref()))) {
+                Ok((mut handle, endpoint, interface_num, product_id)) => {
                     info!("{}", "=".repeat(50));
-                    info!("Arctis Nova 7 ChatMix Connected!");
+                    info!(
+                        "Arctis Nova 7 Connected! (USB {:04x}:{:04x}, IF #{}, EP 0x{:02x})",
+                        VENDOR_ID, product_id, interface_num, endpoint
+                    );
                     info!("  • {} -> Game Audio", GAME_SINK_NAME);
                     info!("  • {} -> Chat Audio", CHAT_SINK_NAME);
+                    if let Some(ref eq) = latest_eq {
+                        info!("  • Active 10-Band EQ -> {}", eq.name);
+                    }
                     info!("{}", "=".repeat(50));
 
                     // Re-link virtual sinks after device reconnect
@@ -177,8 +235,17 @@ impl ArctisController {
                         info!("Moved active audio streams to {}", GAME_SINK_NAME);
                     }
 
+                    // Query initial general status (0xB0)
+                    let _ = rusb_request_status(&handle, interface_num);
+
                     // Read Loop
-                    let res = self.read_loop(&mut handle, endpoint);
+                    let res = self.read_loop(
+                        &mut handle,
+                        endpoint,
+                        interface_num,
+                        product_id,
+                        latest_cfg.poll_status_interval_secs,
+                    );
 
                     // Release the interface (optional, errors here are non-fatal)
                     let _ = handle.release_interface(interface_num);
@@ -199,17 +266,35 @@ impl ArctisController {
         Ok(())
     }
 
-    fn read_loop<T: UsbContext>(&self, handle: &mut DeviceHandle<T>, endpoint: u8) -> Result<()> {
+    fn read_loop<T: UsbContext>(
+        &self,
+        handle: &mut DeviceHandle<T>,
+        endpoint: u8,
+        interface_num: u8,
+        product_id: u16,
+        poll_interval_secs: u64,
+    ) -> Result<()> {
         let mut buf = [0u8; HID_MSG_SIZE];
         let mut consecutive_errors = 0u32;
         let mut volume_state = VolumeState::default();
+        let mut telemetry = HeadsetTelemetry::default();
+        let is_percentage_device = is_percentage_battery_device(product_id);
+        let mut last_status_poll = Instant::now();
 
         while self.running.load(Ordering::SeqCst) {
+            if poll_interval_secs > 0
+                && last_status_poll.elapsed() >= Duration::from_secs(poll_interval_secs)
+            {
+                let _ = rusb_request_status(handle, interface_num);
+                last_status_poll = Instant::now();
+            }
+
             match handle.read_interrupt(endpoint, &mut buf, Duration::from_millis(1000)) {
                 Ok(len) => {
                     consecutive_errors = 0;
+                    let slice = &buf[..len];
 
-                    if let Some((game_vol, chat_vol)) = parse_chatmix_report(&buf[..len]) {
+                    if let Some((game_vol, chat_vol)) = parse_chatmix_report(slice) {
                         if volume_state.should_apply_game(game_vol) {
                             let game_ok = set_sink_volume(GAME_SINK_NAME, game_vol);
                             volume_state.record_game(game_vol, game_ok);
@@ -217,6 +302,35 @@ impl ArctisController {
                         if volume_state.should_apply_chat(chat_vol) {
                             let chat_ok = set_sink_volume(CHAT_SINK_NAME, chat_vol);
                             volume_state.record_chat(chat_vol, chat_ok);
+                        }
+                    }
+
+                    if let Some(event) = parse_telemetry_event(slice, is_percentage_device) {
+                        // Also apply ChatMix volumes if included in a 0xB0 GeneralStatus snapshot
+                        if let TelemetryEvent::GeneralStatus(report) = event {
+                            if let (Some(game_vol), Some(chat_vol)) =
+                                (report.game_volume, report.chat_volume)
+                            {
+                                if volume_state.should_apply_game(game_vol) {
+                                    let game_ok = set_sink_volume(GAME_SINK_NAME, game_vol);
+                                    volume_state.record_game(game_vol, game_ok);
+                                }
+                                if volume_state.should_apply_chat(chat_vol) {
+                                    let chat_ok = set_sink_volume(CHAT_SINK_NAME, chat_vol);
+                                    volume_state.record_chat(chat_vol, chat_ok);
+                                }
+                            }
+                        }
+
+                        if telemetry.apply_event(&event) {
+                            match event {
+                                TelemetryEvent::ChatMix { .. } => {
+                                    debug!("Telemetry ChatMix: {}", telemetry.summary_line());
+                                }
+                                _ => {
+                                    info!("Headset Telemetry: {}", telemetry.summary_line());
+                                }
+                            }
                         }
                     }
                 }
