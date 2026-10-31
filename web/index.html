@@ -153,6 +153,7 @@ input[type="range"].eq-vslider::-webkit-slider-thumb:hover{transform:scale(1.15)
     <div class="badge ok" id="usb-badge"><span class="dot"></span><span id="usb-badge-text">USB Connected</span></div>
     <div class="badge live" id="sse-badge"><span class="dot"></span><span id="sse-badge-text">LIVE SSE</span></div>
     <div class="badge" id="sync-badge"><span class="dot"></span><span id="sync-badge-text">SYNC: 2s</span></div>
+    <span id="last-updated-label" style="font-family:var(--font-mono);font-size:0.75rem;color:var(--text-dim);white-space:nowrap;">Updated --</span>
   </div>
   <div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;">
     <button type="button" class="btn btn-flash" id="btn-save-flash-top">⚡ Save Flash (0x09)</button>
@@ -524,7 +525,7 @@ input[type="range"].eq-vslider::-webkit-slider-thumb:hover{transform:scale(1.15)
     const battBar=document.getElementById('battery-bar');
     if(typeof st.battery_percent==='number'){
       valBatt.textContent=st.battery_percent+'%';
-      valBattRaw?valBattRaw.textContent=st.battery_raw!=null?`(raw ${st.battery_raw})`:'';' ';
+      if (valBattRaw) valBattRaw.textContent = st.battery_raw != null ? `(raw ${st.battery_raw})` : '';
       battBar.style.width=Math.max(0,Math.min(100,st.battery_percent))+'%';
       battBar.style.background=st.battery_percent<=20?'linear-gradient(90deg,#ef4444,#f87171)':st.battery_percent<=40?'linear-gradient(90deg,#f59e0b,#fbbf24)':'linear-gradient(90deg,var(--green),#34d399)';
     }else{valBatt.textContent='N/A';valBattRaw?valBattRaw.textContent='(awaiting 0xB0/0xB7)':'';battBar.style.width='0%';}
@@ -579,7 +580,8 @@ input[type="range"].eq-vslider::-webkit-slider-thumb:hover{transform:scale(1.15)
     // Last updated
     if(st.last_updated_ms){
       const dt=new Date(st.last_updated_ms);
-      document.getElementById('last-updated-label').textContent='Updated '+dt.toLocaleTimeString();
+      const lu=document.getElementById('last-updated-label');
+      if(lu) lu.textContent='Updated '+dt.toLocaleTimeString();
     }
     // Raw telemetry
     document.getElementById('raw-telemetry').textContent=JSON.stringify(st,null,2);
@@ -595,7 +597,7 @@ input[type="range"].eq-vslider::-webkit-slider-thumb:hover{transform:scale(1.15)
   window.patchBtPower=function(on){document.getElementById('lbl-bt-power').textContent=on?'Enabled':'Disabled';fetch('/api/settings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({bt_power_on_default:on})}).then(r=>r.json()).then(d=>{if(d.ok)showToast('BT Power');}).catch(e=>showToast('BT error',true));};
   window.patchBtCall=function(mode){fetch('/api/settings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({bt_call_behavior:mode})}).then(r=>r.json()).then(d=>{if(d.ok)showToast('BT Call '+mode);}).catch(e=>showToast('BT call error',true));};
   window.setSidetone=function(l){document.getElementById('sidetone-label').textContent=l===0?'Off':l===1?'Low':l===2?'Medium':'High';fetch('/api/sidetone',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({level:Number(l),enabled:l>0})}).then(r=>r.json()).then(d=>{if(d.ok)showToast('Sidetone '+l);}).catch(e=>showToast('Sidetone error',true));};
-  window.setPolling=function(sec){document.querySelectorAll('#seg-polling .seg-btn').forEach(b=>b.classList.remove('active'));document.querySelector('#seg-polling .seg-btn').closest('[onclick*="setPolling('+sec+')"]').classList.add('active');document.getElementById('sync-badge-text').textContent='SYNC: '+sec+'s';};
+  window.setPolling=function(sec){document.querySelectorAll('#seg-polling .seg-btn').forEach(b=>b.classList.remove('active'));const pb=document.querySelector('#seg-polling .seg-btn[onclick*="setPolling(' + sec + ')"]');if(pb)pb.classList.add('active');document.getElementById('sync-badge-text').textContent='SYNC: '+sec+'s';};
   window.triggerSaveFlash=function(){fetch('/api/save-flash',{method:'POST'}).then(r=>r.json()).then(d=>{showToast('⚡ Saved to Flash (0x09)');}).catch(e=>showToast('Flash error',true));};
   // SSE connection with live badge
   function connectSse(){

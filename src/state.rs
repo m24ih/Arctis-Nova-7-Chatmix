@@ -552,6 +552,8 @@ impl DeviceWorker {
                         }
 
                         let _ = self.handle.config_manager.save_config(&st.config);
+                        let save_to_flash_flag = st.config.save_to_flash;
+                        send_reports_if_connected(&reports, usb_handle, save_to_flash_flag)?;
                         st.touch();
                         st.config.hardware.clone()
                     };
@@ -663,32 +665,7 @@ fn send_report_serialized<T: UsbContext>(
     }
 }
 
-#[allow(dead_code)]
-fn send_reports_serialized<T: UsbContext>(
-    reports: &[[u8; HID_MSG_SIZE]],
-    usb_handle: Option<(&DeviceHandle<T>, u8)>,
-) -> Result<()> {
-    match hidapi_send_reports(reports) {
-        Ok(()) => Ok(()),
-        Err(hid_err) => {
-            if let Some((handle, interface_num)) = usb_handle {
-                debug!(
-                    "hidapi batch write failed ({}), falling back to rusb control transfers",
-                    hid_err
-                );
-                for (idx, report) in reports.iter().enumerate() {
-                    rusb_send_hid_report(handle, interface_num, report)?;
-                    if idx + 1 < reports.len() {
-                        std::thread::sleep(USB_INTER_REPORT_DELAY);
-                    }
-                }
-                Ok(())
-            } else {
-                Err(hid_err)
-            }
-        }
-    }
-}
+// Removed unused function send_reports_serialized to eliminate dead code warning.
 
 pub fn load_all_presets(config_manager: &ConfigManager) -> Vec<ParametricEqProfile> {
     let mut out = Vec::new();
