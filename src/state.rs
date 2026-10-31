@@ -398,7 +398,8 @@ impl DeviceWorker {
                         st.touch();
                     }
 
-                    send_report_serialized(&report, usb_handle)?;
+                    let save_to_flash = self.handle.state.read().map(|s| s.config.save_to_flash).unwrap_or(false);
+                    send_report_if_connected(&report, usb_handle, save_to_flash)?;
                     Ok(())
                 })();
                 self.handle.broadcast_state("eq");
@@ -417,7 +418,8 @@ impl DeviceWorker {
                         st.touch();
                     }
 
-                    send_report_serialized(&report, usb_handle)?;
+                    let save_to_flash = self.handle.state.read().map(|s| s.config.save_to_flash).unwrap_or(false);
+                    send_report_if_connected(&report, usb_handle, save_to_flash)?;
                     Ok(profile)
                 })();
                 self.handle.broadcast_state("eq");
@@ -430,6 +432,7 @@ impl DeviceWorker {
                 reply,
             } => {
                 let res = (|| -> Result<u8> {
+                    let prev_level = self.handle.state.read().map(|s| s.config.hardware.sidetone_level).unwrap_or(0);
                     let resolved_level = if !enabled {
                         0
                     } else if let Some(lvl) = level {
@@ -450,15 +453,23 @@ impl DeviceWorker {
                         build_sidetone_level_report(resolved_level)
                     };
 
-                    send_report_serialized(&report, usb_handle)?;
-
+                    // Update HeadsetState and save config BEFORE sending USB report
                     if let Ok(mut st) = self.handle.state.write() {
-                        st.config.hardware.sidetone_enabled = resolved_level > 0;
-                        st.config.hardware.sidetone_level = resolved_level;
-                        st.telemetry.sidetone_level = Some(resolved_level);
+                        let saved_level = if !enabled && level.is_none() && percent.is_none() {
+                            prev_level
+                        } else if enabled && level.is_none() && percent.is_none() {
+                            prev_level.max(1)
+                        } else {
+                            resolved_level
+                        };
+                        st.config.hardware.sidetone_enabled = saved_level > 0;
+                        st.config.hardware.sidetone_level = saved_level;
+                        st.telemetry.sidetone_level = Some(saved_level);
                         let _ = self.handle.config_manager.save_config(&st.config);
                         st.touch();
                     }
+
+                    send_report_if_connected(&report, usb_handle, false)?;
                     Ok(resolved_level)
                 })();
                 self.handle.broadcast_state("sidetone");
@@ -545,7 +556,8 @@ impl DeviceWorker {
                     };
 
                     if !reports.is_empty() {
-                        send_reports_serialized(&reports, usb_handle)?;
+                        let save_to_flash = self.handle.state.read().map(|s| s.config.save_to_flash).unwrap_or(false);
+                        send_reports_if_connected(&reports, usb_handle, save_to_flash)?;
                     }
 
                     Ok(updated_hw)
@@ -581,6 +593,54 @@ impl DeviceWorker {
     }
 }
 
+fn send_report_if_connected<T: UsbContext>(
+    report: &[u8; HID_MSG_SIZE],
+    usb_handle: Option<(&DeviceHandle<T>, u8)>,
+    save_to_flash: bool,
+) -> Result<()> {
+    let mut reports = vec![*report];
+    if save_to_flash {
+        reports.push(build_save_to_flash_report());
+    }
+    send_reports_if_connected(&reports, usb_handle, false)
+}
+
+fn send_reports_if_connected<T: UsbContext>(
+    reports: &[[u8; HID_MSG_SIZE]],
+    usb_handle: Option<(&DeviceHandle<T>, u8)>,
+    save_to_flash: bool,
+) -> Result<()> {
+    let mut reports_to_send = reports.to_vec();
+    if save_to_flash {
+        reports_to_send.push(build_save_to_flash_report());
+    }
+
+    match hidapi_send_reports(&reports_to_send) {
+        Ok(()) => Ok(()),
+        Err(hid_err) => {
+            if let Some((handle, interface_num)) = usb_handle {
+                debug!(
+                    "hidapi batch write failed ({}), falling back to rusb control transfers",
+                    hid_err
+                );
+                for (idx, report) in reports_to_send.iter().enumerate() {
+                    rusb_send_hid_report(handle, interface_num, report)?;
+                    if idx + 1 < reports_to_send.len() {
+                        std::thread::sleep(USB_INTER_REPORT_DELAY);
+                    }
+                }
+                Ok(())
+            } else {
+                warn!(
+                    "USB device not connected; state/config updated and will be applied when headset connects (hidapi: {})",
+                    hid_err
+                );
+                Ok(())
+            }
+        }
+    }
+}
+
 fn send_report_serialized<T: UsbContext>(
     report: &[u8; HID_MSG_SIZE],
     usb_handle: Option<(&DeviceHandle<T>, u8)>,
@@ -602,6 +662,7 @@ fn send_report_serialized<T: UsbContext>(
     }
 }
 
+#[allow(dead_code)]
 fn send_reports_serialized<T: UsbContext>(
     reports: &[[u8; HID_MSG_SIZE]],
     usb_handle: Option<(&DeviceHandle<T>, u8)>,

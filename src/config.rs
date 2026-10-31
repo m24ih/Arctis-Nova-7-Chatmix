@@ -75,6 +75,16 @@ impl Default for AppConfig {
     }
 }
 
+/// Escapes a Rust string for safe embedding inside a TOML basic string (`"..."`).
+/// Escapes `\`, `"`, newline, carriage return, and tab per TOML spec.
+fn escape_toml_str(s: &str) -> String {
+    s.replace('\\', "\\\\")
+        .replace('"', "\\\"")
+        .replace('\n', "\\n")
+        .replace('\r', "\\r")
+        .replace('\t', "\\t")
+}
+
 impl AppConfig {
     pub fn to_toml_string(&self) -> String {
         format!(
@@ -110,12 +120,12 @@ bt_power_on_default = {bt_power}
 # Bluetooth call behavior (0xB3 / 0x09B3): "do_nothing", "attenuate_12db", or "mute_game"
 bt_call_behavior = "{bt_call}"
 "#,
-            active_profile = self.active_profile,
+            active_profile = escape_toml_str(&self.active_profile),
             auto_apply = self.auto_apply_on_connect,
             save_flash = self.save_to_flash,
             poll_secs = self.poll_status_interval_secs,
             web_enabled = self.web_enabled,
-            web_bind = self.web_bind,
+            web_bind = escape_toml_str(&self.web_bind),
             sidetone_enabled = self.hardware.sidetone_enabled,
             sidetone_level = self.hardware.sidetone_level.min(MAX_SIDETONE_LEVEL),
             mic_gain = self.hardware.mic_gain.min(MAX_MIC_GAIN_LEVEL),
@@ -145,7 +155,7 @@ bt_call_behavior = "{bt_call}"
 
             match key {
                 "active_profile" => {
-                    cfg.active_profile = unquote(val).to_string();
+                    cfg.active_profile = unquote_toml_str(val);
                 }
                 "auto_apply_on_connect" => {
                     if let Some(b) = parse_bool(val) {
@@ -168,7 +178,8 @@ bt_call_behavior = "{bt_call}"
                     }
                 }
                 "web_bind" => {
-                    let parsed = unquote(val).trim();
+                    let parsed_str = unquote_toml_str(val);
+                    let parsed = parsed_str.trim();
                     if !parsed.is_empty() {
                         cfg.web_bind = parsed.to_string();
                     }
@@ -274,8 +285,8 @@ gains_db = [{gains}]
 q_factors = [{qs}]
 filter_types = [{filters}]
 "#,
-        name = profile.name,
-        desc = profile.description,
+        name = escape_toml_str(&profile.name),
+        desc = escape_toml_str(&profile.description),
         freqs = freqs,
         gains = gains,
         qs = qs,
@@ -304,13 +315,14 @@ pub fn profile_from_toml_str(input: &str, fallback_name: &str) -> Result<Paramet
 
         match key {
             "name" => {
-                let parsed = unquote(val).trim();
+                let parsed_str = unquote_toml_str(val);
+                let parsed = parsed_str.trim();
                 if !parsed.is_empty() {
                     name = parsed.to_string();
                 }
             }
             "description" => {
-                description = unquote(val).to_string();
+                description = unquote_toml_str(val);
             }
             "frequencies_hz" => {
                 if let Some(items) = parse_bracket_list(val) {
@@ -572,6 +584,24 @@ fn unquote(val: &str) -> &str {
         &trimmed[1..trimmed.len() - 1]
     } else {
         trimmed
+    }
+}
+
+fn unquote_toml_str(val: &str) -> String {
+    let trimmed = val.trim();
+    if trimmed.len() >= 2
+        && ((trimmed.starts_with('"') && trimmed.ends_with('"'))
+            || (trimmed.starts_with('\'') && trimmed.ends_with('\'')))
+    {
+        let inner = &trimmed[1..trimmed.len() - 1];
+        inner
+            .replace("\\\\", "\\")
+            .replace("\\\"", "\"")
+            .replace("\\n", "\n")
+            .replace("\\r", "\r")
+            .replace("\\t", "\t")
+    } else {
+        trimmed.to_string()
     }
 }
 

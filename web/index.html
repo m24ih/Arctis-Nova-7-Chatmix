@@ -1244,6 +1244,7 @@
 
   <script>
     (() => {
+      document.getElementById("device-sub-label").textContent = `${window.location.host || "127.0.0.1:3927"} • PipeWire ChatMix & 10-Band EQ Daemon`;
       const EQ_FREQS = [31, 62, 125, 250, 500, 1000, 2000, 4000, 8000, 16000];
       const EQ_LABELS = ["31", "62", "125", "250", "500", "1k", "2k", "4k", "8k", "16k"];
 
@@ -1365,6 +1366,18 @@
         return Math.round(2 * (10 + clamped));
       }
 
+      function escapeHtml(str) {
+        if (str == null) {
+          return "";
+        }
+        return String(str)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#039;");
+      }
+
       // Build 10-band slider strips
       function initEqSliders() {
         const container = document.getElementById("eq-sliders-container");
@@ -1419,6 +1432,8 @@
 
           slider.addEventListener("pointerdown", () => { isDraggingSlider = true; });
           slider.addEventListener("pointerup", () => { isDraggingSlider = false; });
+          slider.addEventListener("pointercancel", () => { isDraggingSlider = false; });
+          slider.addEventListener("blur", () => { isDraggingSlider = false; });
 
           slider.addEventListener("input", () => {
             currentBands[idx].gain_db = parseFloat(slider.value) || 0.0;
@@ -1675,10 +1690,12 @@
           card.innerHTML = `
             <div>
               <div class="preset-card-top">
-                <span class="preset-name">${preset.title || preset.name}</span>
-                <span class="preset-tag">${isActive ? "● ACTIVE" : preset.tag || "Preset"}</span>
+                <span class="preset-name">${escapeHtml(preset.title || preset.name)}</span>
+                <span class="preset-tag">${isActive ? "● ACTIVE" : escapeHtml(preset.tag || "Preset")}</span>
               </div>
-              <div class="preset-desc" style="margin-top:0.35rem;">${preset.description || ""}</div>
+              <div class="preset-desc" style="margin-top:0.35rem;">${escapeHtml(
+                preset.description || ""
+              )}</div>
             </div>
             <div class="preset-mini-bars">${barsHtml}</div>
           `;
@@ -1956,6 +1973,8 @@
         };
 
         [
+          "connected",
+          "disconnected",
           "status",
           "telemetry",
           "chatmix",

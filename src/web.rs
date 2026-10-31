@@ -280,11 +280,12 @@ fn handle_post_eq(
     // Case 1: Only a preset/profile name was provided without custom gains -> activate preset
     let has_gains = extract_json_f32_array(body, "gains_db").is_some()
         || extract_json_f32_array(body, "gains").is_some()
-        || body.contains("\"bands\"");
+        || extract_json_array_raw(body, "bands").is_some();
 
     if !has_gains {
-        if let Some(preset_name) =
-            extract_json_string(body, "preset").or_else(|| extract_json_string(body, "name"))
+        if let Some(preset_name) = extract_json_string(body, "preset")
+            .or_else(|| extract_json_string(body, "name"))
+            .or_else(|| extract_json_string(body, "active_profile"))
         {
             let (tx, rx) = mpsc::channel();
             worker.send_command(DeviceCommand::ActivatePreset {
@@ -342,7 +343,7 @@ fn handle_post_presets(
     // If body includes gains/bands, save & activate as a named preset
     let has_gains = extract_json_f32_array(body, "gains_db").is_some()
         || extract_json_f32_array(body, "gains").is_some()
-        || body.contains("\"bands\"");
+        || extract_json_array_raw(body, "bands").is_some();
 
     if has_gains {
         return handle_post_eq(stream, worker, body);
@@ -387,14 +388,14 @@ fn handle_post_sidetone(
     let percent = extract_json_u64(body, "percent")
         .or_else(|| extract_json_u64(body, "sidetone_percent"))
         .map(|v| v.min(100) as u8);
-    let enabled = extract_json_bool(body, "enabled")
-        .or_else(|| extract_json_bool(body, "sidetone_enabled"))
-        .unwrap_or_else(|| match (level, percent) {
-            (Some(0), None) | (None, Some(0)) => false,
-            _ => true,
-        });
+    let enabled_opt = extract_json_bool(body, "enabled")
+        .or_else(|| extract_json_bool(body, "sidetone_enabled"));
+    let enabled = enabled_opt.unwrap_or_else(|| match (level, percent) {
+        (Some(0), None) | (None, Some(0)) => false,
+        _ => true,
+    });
 
-    if level.is_none() && percent.is_none() && extract_json_bool(body, "enabled").is_none() {
+    if level.is_none() && percent.is_none() && enabled_opt.is_none() {
         return write_error_response(
             stream,
             400,
@@ -490,7 +491,14 @@ fn parse_eq_profile_from_json(body: &str) -> Result<ParametricEqProfile> {
     // Check if full `bands: [ { ... }, ... ]` array is provided
     if let Some(bands_slice) = extract_json_array_raw(body, "bands") {
         let objects = split_json_objects(bands_slice);
-        if objects.len() == EQ_BAND_COUNT {
+        if !objects.is_empty() {
+            if objects.len() != EQ_BAND_COUNT {
+                anyhow::bail!(
+                    "Expected exactly {} EQ bands in 'bands', got {}",
+                    EQ_BAND_COUNT,
+                    objects.len()
+                );
+            }
             let mut bands = [EqBand::new(0, 0.0); EQ_BAND_COUNT];
             for (i, obj) in objects.iter().enumerate() {
                 let freq = extract_json_u64(obj, "frequency_hz")
@@ -509,6 +517,33 @@ fn parse_eq_profile_from_json(body: &str) -> Result<ParametricEqProfile> {
                     .map(|s| EqFilterType::from_str_lossy(&s))
                     .unwrap_or(EqFilterType::Peaking);
                 bands[i] = EqBand::with_q_and_filter(freq, gain, q, filter);
+            }
+            return Ok(ParametricEqProfile {
+                name,
+                description,
+                bands,
+            });
+        }
+
+        // Empty objects array: allow `bands` as a 10-float array
+        if let Some(gains_vec) = extract_json_f32_array(body, "bands") {
+            if gains_vec.len() != EQ_BAND_COUNT {
+                anyhow::bail!(
+                    "Expected exactly {} EQ bands in 'bands', got {}",
+                    EQ_BAND_COUNT,
+                    gains_vec.len()
+                );
+            }
+            let mut bands = [EqBand::new(0, 0.0); EQ_BAND_COUNT];
+            let qs_vec = extract_json_f32_array(body, "q_factors");
+            for i in 0..EQ_BAND_COUNT {
+                let gain = gains_vec[i].clamp(MIN_EQ_GAIN_DB, MAX_EQ_GAIN_DB);
+                let q = qs_vec
+                    .as_ref()
+                    .and_then(|v| v.get(i).copied())
+                    .unwrap_or(DEFAULT_Q_FACTOR)
+                    .clamp(0.1, 10.0);
+                bands[i] = EqBand::with_q_and_filter(EQ_FREQUENCIES_HZ[i], gain, q, EqFilterType::Peaking);
             }
             return Ok(ParametricEqProfile {
                 name,
@@ -553,14 +588,46 @@ fn parse_eq_profile_from_json(body: &str) -> Result<ParametricEqProfile> {
 
 fn find_json_value_slice<'a>(json: &'a str, key: &str) -> Option<&'a str> {
     let needle = format!("\"{}\"", key);
-    let mut search_from = 0;
-    while let Some(pos) = json[search_from..].find(&needle) {
-        let abs_pos = search_from + pos + needle.len();
-        let rest = json[abs_pos..].trim_start();
-        if let Some(after_colon) = rest.strip_prefix(':') {
-            return Some(after_colon.trim_start());
+    let mut in_string = false;
+    let mut escaped = false;
+    let mut i = 0;
+
+    while i < json.len() {
+        let ch = json[i..].chars().next().unwrap();
+        if escaped {
+            escaped = false;
+            i += ch.len_utf8();
+            continue;
         }
-        search_from = abs_pos;
+        if ch == '\\' {
+            escaped = true;
+            i += ch.len_utf8();
+            continue;
+        }
+        if !in_string {
+            if json[i..].starts_with(&needle) {
+                let after_key = i + needle.len();
+                if after_key < json.len() {
+                    let rest = json[after_key..].trim_start();
+                    if rest.starts_with(':') {
+                        return Some(rest[1..].trim_start());
+                    }
+                }
+            }
+            if ch == '"' {
+                in_string = true;
+                i += ch.len_utf8();
+                continue;
+            }
+            i += ch.len_utf8();
+        } else {
+            if ch == '"' {
+                in_string = false;
+                i += ch.len_utf8();
+                continue;
+            }
+            i += ch.len_utf8();
+        }
     }
     None
 }
