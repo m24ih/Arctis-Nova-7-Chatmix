@@ -64,6 +64,7 @@ body{background-color:var(--bg-base);background-image:radial-gradient(circle at 
 .chatmix-layout{display:grid;grid-template-columns:160px 1fr;gap:1.25rem;align-items:center;}
 @media(max-width:640px){.chatmix-layout{grid-template-columns:1fr;justify-items:center;}}
 .dial-wrap{display:flex;flex-direction:column;align-items:center;gap:0.4rem;}
+  #chatmix-needle{transition:transform 0.05s ease-out;}
 .chatmix-dial{width:140px;height:140px;position:relative;}
 .chatmix-dial svg{display:block;width:100%;height:100%;filter:drop-shadow(0 4px 12px rgba(0,0,0,0.4));}
 .chatmix-channels{width:100%;display:flex;flex-direction:column;gap:0.85rem;}
@@ -71,8 +72,8 @@ body{background-color:var(--bg-base);background-image:radial-gradient(circle at 
 .channel-header{display:flex;justify-content:space-between;font-size:0.82rem;font-weight:700;color:var(--text-main);font-family:var(--font-sans);}
 .channel-pct{font-family:var(--font-mono);font-weight:800;color:var(--accent);}
 .meter-track{height:14px;background:#0e121a;border:1px solid var(--border);border-radius:999px;overflow:hidden;position:relative;}
-.meter-fill-game{height:100%;background:linear-gradient(90deg,#ff5e00,#ff8c3a);transition:width 0.25s ease-out;border-radius:999px;position:relative;box-shadow:inset 0 1px 0 rgba(255,255,255,0.1);}
-.meter-fill-chat{height:100%;background:linear-gradient(90deg,#0077b6,#00d2ff);transition:width 0.25s ease-out;border-radius:999px;position:relative;box-shadow:inset 0 1px 0 rgba(255,255,255,0.1);}
+.meter-fill-game{height:100%;background:linear-gradient(90deg,#ff5e00,#ff8c3a);transition:width 0.05s ease-out;border-radius:999px;position:relative;box-shadow:inset 0 1px 0 rgba(255,255,255,0.1);}
+.meter-fill-chat{height:100%;background:linear-gradient(90deg,#0077b6,#00d2ff);transition:width 0.05s ease-out;border-radius:999px;position:relative;box-shadow:inset 0 1px 0 rgba(255,255,255,0.1);}
 .eq-curve-box{background:#0e121a;border:1px solid var(--border);border-radius:var(--radius-sm);padding:0.6rem;margin-bottom:1.2rem;position:relative;overflow:hidden;}
 .eq-curve-box::before{content:"";position:absolute;inset:0;background:radial-gradient(circle at 50% 30%,rgba(255,94,0,0.06),transparent 70%);pointer-events:none;}
 .eq-svg{width:100%;height:160px;display:block;}
@@ -153,6 +154,7 @@ input[type="range"].eq-vslider::-webkit-slider-thumb:hover{transform:scale(1.15)
     <div class="badge ok" id="usb-badge"><span class="dot"></span><span id="usb-badge-text">USB Connected</span></div>
     <div class="badge live" id="sse-badge"><span class="dot"></span><span id="sse-badge-text">LIVE SSE</span></div>
     <div class="badge" id="sync-badge"><span class="dot"></span><span id="sync-badge-text">SYNC: 2s</span></div>
+    <div class="badge ok" id="header-chatmix-badge" title="Live ChatMix Dial"><span class="dot"></span><span id="header-chatmix-text">🎮 100% ╎ 100% 💬</span></div>
     <span id="last-updated-label" style="font-family:var(--font-mono);font-size:0.75rem;color:var(--text-dim);white-space:nowrap;">Updated --</span>
   </div>
   <div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;">
@@ -218,7 +220,7 @@ input[type="range"].eq-vslider::-webkit-slider-thumb:hover{transform:scale(1.15)
                 <path d="M 26 94 A 48 48 0 0 1 60 12" fill="none" stroke="#ff5e00" stroke-width="5" stroke-linecap="round" opacity="0.7"/>
                 <path d="M 60 12 A 48 48 0 0 1 94 94" fill="none" stroke="#00d2ff" stroke-width="5" stroke-linecap="round" opacity="0.7"/>
                 <line x1="60" y1="4" x2="60" y2="12" stroke="#e6edf3" stroke-width="2"/>
-                <g id="chatmix-needle" transform="rotate(0 60 60)">
+                <g id="chatmix-needle" transform="rotate(0 60 60)" style="transition: transform 0.05s ease-out;">
                   <line x1="60" y1="60" x2="60" y2="20" stroke="#ff5e00" stroke-width="4" stroke-linecap="round"/>
                   <circle cx="60" cy="60" r="7" fill="#e6edf3"/>
                 </g>
@@ -236,6 +238,15 @@ input[type="range"].eq-vslider::-webkit-slider-thumb:hover{transform:scale(1.15)
               <div class="channel-header"><span>💬 Chat Sink (Arctis_Chat)</span><span class="channel-pct" id="val-chat-vol">100%</span></div>
               <div class="meter-track"><div class="meter-fill-chat" id="bar-chat-vol" style="width:100%"></div></div>
             </div>
+          </div>
+        </div>
+        <div style="margin-top:1rem;padding-top:0.75rem;border-top:1px solid var(--border);">
+          <div style="font-size:0.75rem;font-weight:700;color:var(--text-muted);margin-bottom:0.35rem;letter-spacing:0.03em;">Interactive Sonar Balance Slider</div>
+          <input type="range" id="input-chatmix-balance" min="-100" max="100" value="0" class="eq-vslider" style="width:100%;height:10px;accent-color:var(--accent);" oninput="updateChatmixBalance(this.value)" onchange="postChatmixBalance(this.value)">
+          <div style="display:flex;gap:0.5rem;margin-top:0.4rem;flex-wrap:wrap;">
+            <button type="button" class="btn" onclick="postChatmixDirect(100,0)">100% Game</button>
+            <button type="button" class="btn btn-primary" onclick="postChatmixDirect(50,50)">Balanced (50/50)</button>
+            <button type="button" class="btn" onclick="postChatmixDirect(0,100)" style="background:linear-gradient(135deg,#0077b6,#00d2ff);border-color:transparent;color:#fff;">100% Chat</button>
           </div>
         </div>
       </div>
@@ -561,6 +572,12 @@ input[type="range"].eq-vslider::-webkit-slider-thumb:hover{transform:scale(1.15)
       if(Math.abs(diff)<=4){biasBadge.textContent='Balanced';biasBadge.className='badge ok';}
       else if(diff<0){biasBadge.textContent=`Game Bias (+${Math.abs(diff)}%)`;biasBadge.className='badge warn';}
       else{biasBadge.textContent=`Chat Bias (+${diff}%)`;biasBadge.className='badge ok';}
+      const headerText=document.getElementById('header-chatmix-text');
+      if(headerText)headerText.textContent=`🎮 ${game}% ╎ ${chat}% 💬`;
+      const slider=document.getElementById('input-chatmix-balance');
+      if(slider&&(!slider.matches(':focus')&&!(document.activeElement===slider))){
+        slider.value=Math.round(chat-game);
+      }
     }
     // Active profile
     if(st.active_profile){activeProfileName=st.active_profile;document.getElementById('active-eq-badge').textContent='Active: '+activeProfileName;}
@@ -596,6 +613,43 @@ input[type="range"].eq-vslider::-webkit-slider-thumb:hover{transform:scale(1.15)
   window.patchInactivity=function(v){fetch('/api/settings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({inactivity_timer_mins:Number(v)})}).then(r=>r.json()).then(d=>{if(d.ok)showToast('Sleep Timer '+v+'m');}).catch(e=>showToast('Sleep error',true));};
   window.patchBtPower=function(on){document.getElementById('lbl-bt-power').textContent=on?'Enabled':'Disabled';fetch('/api/settings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({bt_power_on_default:on})}).then(r=>r.json()).then(d=>{if(d.ok)showToast('BT Power');}).catch(e=>showToast('BT error',true));};
   window.patchBtCall=function(mode){fetch('/api/settings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({bt_call_behavior:mode})}).then(r=>r.json()).then(d=>{if(d.ok)showToast('BT Call '+mode);}).catch(e=>showToast('BT call error',true));};
+  window.postChatmixDirect = function(game,chat){
+    fetch('/api/chatmix',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({game:Number(game),chat:Number(chat)})}).then(r=>r.json()).then(d=>{if(d.ok){document.getElementById('input-chatmix-balance').value=game===100&&chat===100?0:game===0&&chat===100?100:game===100&&chat===0?-100:Math.round((chat-game)/2);}}).catch(_=>{});
+    updateChatmixUI(game,chat);
+  };
+  window.updateChatmixBalance = function(v){
+    const val=parseInt(v,10)||0;
+    const balance=Math.round(val);
+    const game=balance<0?100:balance>0?100-Math.abs(balance):100;
+    const chat=balance>0?100:balance<0?100-Math.abs(balance):100;
+    updateChatmixUI(game,chat);
+  };
+  window.postChatmixBalance = function(v){
+    const balance=parseInt(v,10)||0;
+    fetch('/api/chatmix',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({balance:balance})}).catch(_=>{});
+  };
+  function updateChatmixUI(game,chat){
+    if(typeof game!=='number')game=100;
+    if(typeof chat!=='number')chat=100;
+    document.getElementById('val-game-vol').textContent=game+'%';
+    document.getElementById('val-chat-vol').textContent=chat+'%';
+    document.getElementById('bar-game-vol').style.width=game+'%';
+    document.getElementById('bar-chat-vol').style.width=chat+'%';
+    const diff=chat-game;const angle=(diff/100)*125;
+    const needle=document.getElementById('chatmix-needle');
+    if(needle)needle.setAttribute('transform',`rotate(${angle.toFixed(1)} 60 60)`);
+    const biasBadge=document.getElementById('chatmix-bias-badge');
+    if(Math.abs(diff)<=4){biasBadge.textContent='Balanced';biasBadge.className='badge ok';}
+    else if(diff<0){biasBadge.textContent=`Game Bias (+${Math.abs(diff)}%)`;biasBadge.className='badge warn';}
+    else{biasBadge.textContent=`Chat Bias (+${diff}%)`;biasBadge.className='badge ok';}
+    const headerText=document.getElementById('header-chatmix-text');
+    if(headerText)headerText.textContent=`🎮 ${game}% ╎ ${chat}% 💬`;
+    const slider=document.getElementById('input-chatmix-balance');
+    if(slider&&!document.activeElement===slider){
+      const b=Math.round(chat-game);
+      slider.value=b;
+    }
+  }
   window.setSidetone=function(l){document.getElementById('sidetone-label').textContent=l===0?'Off':l===1?'Low':l===2?'Medium':'High';fetch('/api/sidetone',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({level:Number(l),enabled:l>0})}).then(r=>r.json()).then(d=>{if(d.ok)showToast('Sidetone '+l);}).catch(e=>showToast('Sidetone error',true));};
   window.setPolling=function(sec){document.querySelectorAll('#seg-polling .seg-btn').forEach(b=>b.classList.remove('active'));const pb=document.querySelector('#seg-polling .seg-btn[onclick*="setPolling(' + sec + ')"]');if(pb)pb.classList.add('active');document.getElementById('sync-badge-text').textContent='SYNC: '+sec+'s';};
   window.triggerSaveFlash=function(){fetch('/api/save-flash',{method:'POST'}).then(r=>r.json()).then(d=>{showToast('⚡ Saved to Flash (0x09)');}).catch(e=>showToast('Flash error',true));};

@@ -222,6 +222,7 @@ fn handle_client(
         ("POST", "/api/sidetone") | ("PUT", "/api/sidetone") => {
             handle_post_sidetone(&mut stream, &worker, &body)
         }
+        ("POST", "/api/chatmix") | ("PUT", "/api/chatmix") => handle_post_chatmix(&mut stream, &worker, &body),
         ("POST", "/api/save-flash") => handle_post_save_flash(&mut stream, &worker),
         ("GET", "/") | ("GET", "/index.html") => write_html_response(&mut stream, 200, DEFAULT_INDEX_HTML),
         _ => write_json_response(&mut stream, 404, r#"{"error":"Endpoint not found"}"#),
@@ -234,6 +235,7 @@ fn handle_sse_stream(
     running: Arc<AtomicBool>,
 ) -> Result<()> {
     let _ = stream.set_write_timeout(Some(Duration::from_secs(5)));
+    let _ = stream.set_nodelay(true);
     let headers = concat!(
         "HTTP/1.1 200 OK\r\n",
         "Content-Type: text/event-stream; charset=utf-8\r\n",
@@ -477,6 +479,58 @@ fn handle_post_save_flash(stream: &mut TcpStream, worker: &DeviceWorkerHandle) -
         Ok(Err(e)) => write_error_response(stream, 500, &e.to_string()),
         Err(_) => write_error_response(stream, 504, "Timed out waiting for USB worker"),
     }
+}
+
+fn handle_post_chatmix(
+    stream: &mut TcpStream,
+    worker: &DeviceWorkerHandle,
+    body: &str,
+) -> Result<()> {
+    // Parse balance or direct game/chat values
+    let balance_opt = extract_json_f32(body, "balance").or_else(|| {
+        // Try integer balance too
+        extract_json_u64(body, "balance").map(|v| v as f32)
+    });
+
+    let (mut game, mut chat) = if let Some(b) = balance_opt {
+        let b = b.clamp(-100.0, 100.0) as i8;
+        if b < 0 {
+            (100u8, (100 + b) as u8)
+        } else if b > 0 {
+            ((100 - b) as u8, 100u8)
+        } else {
+            (100u8, 100u8)
+        }
+    } else {
+        let g = extract_json_u64(body, "game")
+            .map(|v| v.min(100) as u8)
+            .unwrap_or(100);
+        let c = extract_json_u64(body, "chat")
+            .map(|v| v.min(100) as u8)
+            .unwrap_or(100);
+        (g, c)
+    };
+
+    // Ensure within 0..=100
+    game = game.min(100);
+    chat = chat.min(100);
+
+    // Apply to PipeWire sinks
+    let _ = crate::audio::set_sink_volume(crate::device::GAME_SINK_NAME, game);
+    let _ = crate::audio::set_sink_volume(crate::device::CHAT_SINK_NAME, chat);
+
+    // Update telemetry state
+    if let Ok(mut st) = worker.state.write() {
+        st.telemetry.game_volume = Some(game);
+        st.telemetry.chat_volume = Some(chat);
+        st.touch();
+    }
+
+    // Broadcast to SSE clients
+    worker.broadcast_state("chatmix");
+
+    let resp = format!("{{\"ok\":true,\"game\":{},\"chat\":{}}}", game, chat);
+    write_json_response(stream, 200, &resp)
 }
 
 /* ---------- Lightweight JSON Parsers ---------- */
