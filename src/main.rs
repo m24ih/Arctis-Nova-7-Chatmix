@@ -3,8 +3,10 @@ mod config;
 mod controller;
 mod device;
 mod eq;
+mod state;
 mod telemetry;
 mod usb;
+mod web;
 
 use anyhow::Result;
 use config::ConfigManager;
@@ -31,7 +33,7 @@ Arctis Nova 7 ChatMix & Hardware DSP Controller
 USAGE:
     arctis_chatmix [OPTIONS]
 
-When run without options, starts the PipeWire ChatMix & Telemetry daemon.
+When run without one-shot options, starts the PipeWire ChatMix, Telemetry & Web API daemon.
 
 OPTIONS:
     --init-config                  Initialize ~/.config/arctis-nova-7/config.toml & presets
@@ -49,6 +51,8 @@ OPTIONS:
     --bt-call <MODE>               Set Bluetooth call behavior: do_nothing, attenuate_12db, mute_game (0xB3)
     --apply-config                 Apply all hardware settings & active EQ from config.toml
     --save-flash                   Persist current settings to headset onboard flash (0x09)
+    --web-bind <HOST:PORT>         Override embedded HTTP server bind address (default 127.0.0.1:3927)
+    --no-web                       Disable embedded HTTP server
     -h, --help                     Print this help message"
     );
 }
@@ -71,6 +75,8 @@ fn handle_cli_args(args: &[String]) -> Result<bool> {
     let mut cfg = cfg_mgr.load_config()?;
     let mut config_modified = false;
     let mut save_flash = false;
+    let mut run_daemon_after = false;
+    let mut saw_oneshot = false;
 
     let mut i = 0;
     while i < args.len() {
@@ -235,10 +241,31 @@ fn handle_cli_args(args: &[String]) -> Result<bool> {
             }
             "--save-flash" => {
                 save_flash = true;
+                saw_oneshot = true;
+            }
+            "--web-bind" => {
+                i += 1;
+                let bind = args
+                    .get(i)
+                    .ok_or_else(|| anyhow::anyhow!("--web-bind requires HOST:PORT"))?;
+                cfg.web_bind = bind.trim().to_string();
+                cfg.web_enabled = true;
+                config_modified = true;
+                run_daemon_after = true;
+            }
+            "--no-web" => {
+                cfg.web_enabled = false;
+                config_modified = true;
+                run_daemon_after = true;
             }
             other => {
                 anyhow::bail!("Unknown argument '{}'. Run with --help for usage.", other);
             }
+        }
+        if !matches!(args.get(i).map(String::as_str), Some("--web-bind") | Some("--no-web"))
+            && (i == 0 || !matches!(args.get(i - 1).map(String::as_str), Some("--web-bind")))
+        {
+            saw_oneshot = true;
         }
         i += 1;
     }
@@ -251,7 +278,7 @@ fn handle_cli_args(args: &[String]) -> Result<bool> {
         hidapi_save_to_flash()?;
     }
 
-    Ok(true)
+    Ok(saw_oneshot || !run_daemon_after)
 }
 
 fn main() -> Result<()> {

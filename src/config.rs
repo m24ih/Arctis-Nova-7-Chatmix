@@ -48,12 +48,16 @@ impl Default for HardwareConfig {
     }
 }
 
+pub const DEFAULT_WEB_BIND: &str = "127.0.0.1:3927";
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AppConfig {
     pub active_profile: String,
     pub auto_apply_on_connect: bool,
     pub save_to_flash: bool,
     pub poll_status_interval_secs: u64,
+    pub web_enabled: bool,
+    pub web_bind: String,
     pub hardware: HardwareConfig,
 }
 
@@ -64,6 +68,8 @@ impl Default for AppConfig {
             auto_apply_on_connect: true,
             save_to_flash: false,
             poll_status_interval_secs: 30,
+            web_enabled: true,
+            web_bind: DEFAULT_WEB_BIND.to_string(),
             hardware: HardwareConfig::default(),
         }
     }
@@ -83,6 +89,9 @@ auto_apply_on_connect = {auto_apply}
 save_to_flash = {save_flash}
 # Interval in seconds for querying 0xB0 general status / battery telemetry (0 = disable polling)
 poll_status_interval_secs = {poll_secs}
+# Embedded HTTP & SSE server for Web UI / API
+web_enabled = {web_enabled}
+web_bind = "{web_bind}"
 
 [hardware]
 # Hardware sidetone (0x39 / 0x0939): level 0 (Off), 1 (Low), 2 (Medium), 3 (High)
@@ -105,6 +114,8 @@ bt_call_behavior = "{bt_call}"
             auto_apply = self.auto_apply_on_connect,
             save_flash = self.save_to_flash,
             poll_secs = self.poll_status_interval_secs,
+            web_enabled = self.web_enabled,
+            web_bind = self.web_bind,
             sidetone_enabled = self.hardware.sidetone_enabled,
             sidetone_level = self.hardware.sidetone_level.min(MAX_SIDETONE_LEVEL),
             mic_gain = self.hardware.mic_gain.min(MAX_MIC_GAIN_LEVEL),
@@ -118,6 +129,9 @@ bt_call_behavior = "{bt_call}"
 
     pub fn from_toml_str(input: &str) -> Result<Self> {
         let mut cfg = Self::default();
+        let mut web_host: Option<String> = None;
+        let mut web_port: Option<u16> = None;
+
         for raw_line in input.lines() {
             let line = strip_comment(raw_line).trim();
             if line.is_empty() || line.starts_with('[') {
@@ -146,6 +160,28 @@ bt_call_behavior = "{bt_call}"
                 "poll_status_interval_secs" => {
                     if let Ok(n) = val.parse::<u64>() {
                         cfg.poll_status_interval_secs = n;
+                    }
+                }
+                "web_enabled" => {
+                    if let Some(b) = parse_bool(val) {
+                        cfg.web_enabled = b;
+                    }
+                }
+                "web_bind" => {
+                    let parsed = unquote(val).trim();
+                    if !parsed.is_empty() {
+                        cfg.web_bind = parsed.to_string();
+                    }
+                }
+                "web_host" => {
+                    let parsed = unquote(val).trim();
+                    if !parsed.is_empty() {
+                        web_host = Some(parsed.to_string());
+                    }
+                }
+                "web_port" => {
+                    if let Ok(p) = unquote(val).trim().parse::<u16>() {
+                        web_port = Some(p);
                     }
                 }
                 "sidetone_enabled" => {
@@ -190,6 +226,13 @@ bt_call_behavior = "{bt_call}"
                 _ => {}
             }
         }
+
+        if web_host.is_some() || web_port.is_some() {
+            let host = web_host.unwrap_or_else(|| "127.0.0.1".to_string());
+            let port = web_port.unwrap_or(3927);
+            cfg.web_bind = format!("{}:{}", host, port);
+        }
+
         Ok(cfg)
     }
 }

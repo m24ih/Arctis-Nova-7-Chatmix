@@ -8,8 +8,10 @@ use crate::device::{
     FALLBACK_DEFAULT_SINK, GAME_SINK_DESC, GAME_SINK_NAME, HID_MSG_SIZE, VENDOR_ID,
 };
 use crate::eq::ParametricEqProfile;
+use crate::state::{load_all_presets, DeviceWorker, DeviceWorkerHandle};
 use crate::telemetry::{parse_telemetry_event, HeadsetTelemetry, TelemetryEvent};
 use crate::usb::{rusb_request_status, usb_find_and_open};
+use crate::web::spawn_web_server;
 use anyhow::{Context, Result};
 use log::{debug, error, info, warn};
 use rusb::{DeviceHandle, UsbContext};
@@ -57,6 +59,8 @@ pub(crate) struct ArctisController {
     config_manager: ConfigManager,
     config: AppConfig,
     active_eq: Option<ParametricEqProfile>,
+    worker: DeviceWorker,
+    worker_handle: DeviceWorkerHandle,
 }
 
 impl ArctisController {
@@ -97,6 +101,9 @@ impl ArctisController {
             }
         };
 
+        let (worker, worker_handle) =
+            DeviceWorker::create(config_manager.clone(), config.clone());
+
         let running = Arc::new(AtomicBool::new(true));
         let r = running.clone();
 
@@ -112,6 +119,8 @@ impl ArctisController {
             config_manager,
             config,
             active_eq,
+            worker,
+            worker_handle,
         })
     }
 
@@ -152,18 +161,41 @@ impl ArctisController {
     }
 
     pub(crate) fn start(&self) -> Result<()> {
+        // 0. Start embedded HTTP + SSE API server immediately so Web UI / API works even while waiting for headset
+        if self.config.web_enabled {
+            if let Err(e) = spawn_web_server(
+                self.config.web_bind.clone(),
+                self.worker_handle.clone(),
+                self.running.clone(),
+            ) {
+                warn!(
+                    "Could not start embedded HTTP server on {}: {}",
+                    self.config.web_bind, e
+                );
+            }
+        }
+
         // 1. Attempt to create virtual audio sinks
         loop {
             if !self.running.load(Ordering::SeqCst) {
                 return Ok(());
             }
 
+            // Drain any incoming API commands while waiting for PipeWire sink
+            self.worker.drain_commands::<rusb::Context>(None);
+
             info!("Waiting for Arctis Nova 7 audio device...");
             match self.setup_virtual_sinks() {
                 Ok(_) => break,
                 Err(e) => {
                     warn!("Audio setup failed: {}. Retrying in 3 seconds...", e);
-                    std::thread::sleep(Duration::from_secs(3));
+                    for _ in 0..15 {
+                        if !self.running.load(Ordering::SeqCst) {
+                            return Ok(());
+                        }
+                        self.worker.drain_commands::<rusb::Context>(None);
+                        std::thread::sleep(Duration::from_millis(200));
+                    }
                 }
             }
         }
@@ -186,7 +218,13 @@ impl ArctisController {
 
                     warn!("USB connection lost / error: {}", e);
                     info!("Waiting for reconnection...");
-                    std::thread::sleep(Duration::from_secs(3));
+                    for _ in 0..15 {
+                        if !self.running.load(Ordering::SeqCst) {
+                            break;
+                        }
+                        self.worker.drain_commands::<rusb::Context>(None);
+                        std::thread::sleep(Duration::from_millis(200));
+                    }
                 }
             }
         }
@@ -198,6 +236,8 @@ impl ArctisController {
         let usb_ctx = rusb::Context::new().context("Failed to initialize libusb context")?;
 
         while self.running.load(Ordering::SeqCst) {
+            self.worker.drain_commands::<rusb::Context>(None);
+
             // Reload config & active EQ profile on each connection attempt in case user edited TOML files
             let latest_cfg = self
                 .config_manager
@@ -223,6 +263,19 @@ impl ArctisController {
                     }
                     info!("{}", "=".repeat(50));
 
+                    // Update shared state with connection metadata
+                    if let Ok(mut st) = self.worker_handle.state.write() {
+                        st.usb_connected = true;
+                        st.product_id = Some(product_id);
+                        st.config = latest_cfg.clone();
+                        if let Some(ref eq) = latest_eq {
+                            st.active_eq = eq.clone();
+                        }
+                        st.available_presets = load_all_presets(&self.config_manager);
+                        st.touch();
+                    }
+                    self.worker_handle.broadcast_state("connected");
+
                     // Re-link virtual sinks after device reconnect
                     if let Err(e) = self.relink_virtual_sinks_with_retry() {
                         warn!("Failed to relink virtual sinks after reconnect: {}", e);
@@ -247,6 +300,13 @@ impl ArctisController {
                         latest_cfg.poll_status_interval_secs,
                     );
 
+                    // Mark USB disconnected in shared state
+                    if let Ok(mut st) = self.worker_handle.state.write() {
+                        st.usb_connected = false;
+                        st.touch();
+                    }
+                    self.worker_handle.broadcast_state("disconnected");
+
                     // Release the interface (optional, errors here are non-fatal)
                     let _ = handle.release_interface(interface_num);
 
@@ -257,7 +317,13 @@ impl ArctisController {
                         break;
                     }
                     debug!("usb_find_and_open failed: {:?}", e);
-                    std::thread::sleep(Duration::from_secs(2));
+                    for _ in 0..10 {
+                        if !self.running.load(Ordering::SeqCst) {
+                            break;
+                        }
+                        self.worker.drain_commands::<rusb::Context>(None);
+                        std::thread::sleep(Duration::from_millis(200));
+                    }
                     continue;
                 }
             }
@@ -284,16 +350,28 @@ impl ArctisController {
         if let Ok(Some(event)) = crate::usb::hidapi_request_status() {
             if telemetry.apply_event(&event) {
                 info!("Headset Telemetry: {}", telemetry.summary_line());
+                self.sync_telemetry_to_shared_state(&telemetry, "telemetry");
             }
         }
 
         while self.running.load(Ordering::SeqCst) {
-            if poll_interval_secs > 0
-                && last_status_poll.elapsed() >= Duration::from_secs(poll_interval_secs)
+            // 1. Drain any pending Web UI / API commands on this single USB owner thread
+            self.worker.drain_commands(Some((handle, interface_num)));
+
+            let current_poll_secs = self
+                .worker_handle
+                .state
+                .read()
+                .map(|s| s.config.poll_status_interval_secs)
+                .unwrap_or(poll_interval_secs);
+
+            if current_poll_secs > 0
+                && last_status_poll.elapsed() >= Duration::from_secs(current_poll_secs)
             {
                 if let Ok(Some(event)) = crate::usb::hidapi_request_status() {
                     if telemetry.apply_event(&event) {
                         info!("Headset Telemetry: {}", telemetry.summary_line());
+                        self.sync_telemetry_to_shared_state(&telemetry, "telemetry");
                     }
                 } else {
                     let _ = rusb_request_status(handle, interface_num);
@@ -301,7 +379,8 @@ impl ArctisController {
                 last_status_poll = Instant::now();
             }
 
-            match handle.read_interrupt(endpoint, &mut buf, Duration::from_millis(1000)) {
+            // Use 150ms interrupt timeout so queued API commands execute with sub-150ms latency
+            match handle.read_interrupt(endpoint, &mut buf, Duration::from_millis(150)) {
                 Ok(len) => {
                     consecutive_errors = 0;
                     let slice = &buf[..len];
@@ -335,14 +414,17 @@ impl ArctisController {
                         }
 
                         if telemetry.apply_event(&event) {
-                            match event {
+                            let event_name = match event {
                                 TelemetryEvent::ChatMix { .. } => {
                                     debug!("Telemetry ChatMix: {}", telemetry.summary_line());
+                                    "chatmix"
                                 }
                                 _ => {
                                     info!("Headset Telemetry: {}", telemetry.summary_line());
+                                    "telemetry"
                                 }
-                            }
+                            };
+                            self.sync_telemetry_to_shared_state(&telemetry, event_name);
                         }
                     }
                 }
@@ -380,6 +462,14 @@ impl ArctisController {
             }
         }
         Ok(())
+    }
+
+    fn sync_telemetry_to_shared_state(&self, telemetry: &HeadsetTelemetry, sse_event_name: &str) {
+        if let Ok(mut st) = self.worker_handle.state.write() {
+            st.telemetry = telemetry.clone();
+            st.touch();
+        }
+        self.worker_handle.broadcast_state(sse_event_name);
     }
 
     fn relink_virtual_sinks_with_retry(&self) -> Result<()> {
