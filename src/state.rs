@@ -432,7 +432,12 @@ impl DeviceWorker {
                 reply,
             } => {
                 let res = (|| -> Result<u8> {
-                    let prev_level = self.handle.state.read().map(|s| s.config.hardware.sidetone_level).unwrap_or(0);
+                    let (prev_level, save_to_flash) = self
+                        .handle
+                        .state
+                        .read()
+                        .map(|s| (s.config.hardware.sidetone_level, s.config.save_to_flash))
+                        .unwrap_or((0, false));
                     let resolved_level = if !enabled {
                         0
                     } else if let Some(lvl) = level {
@@ -440,7 +445,7 @@ impl DeviceWorker {
                     } else if let Some(pct) = percent {
                         sidetone_bucket(pct.min(MAX_VOLUME_PERCENT))
                     } else {
-                        1
+                        prev_level.max(1).min(MAX_SIDETONE_LEVEL)
                     };
 
                     let report = if let Some(pct) = percent {
@@ -453,23 +458,19 @@ impl DeviceWorker {
                         build_sidetone_level_report(resolved_level)
                     };
 
-                    // Update HeadsetState and save config BEFORE sending USB report
                     if let Ok(mut st) = self.handle.state.write() {
-                        let saved_level = if !enabled && level.is_none() && percent.is_none() {
-                            prev_level
-                        } else if enabled && level.is_none() && percent.is_none() {
-                            prev_level.max(1)
+                        st.config.hardware.sidetone_enabled = resolved_level > 0;
+                        if !enabled && level.is_none() && percent.is_none() {
+                            st.config.hardware.sidetone_level = prev_level;
                         } else {
-                            resolved_level
-                        };
-                        st.config.hardware.sidetone_enabled = saved_level > 0;
-                        st.config.hardware.sidetone_level = saved_level;
-                        st.telemetry.sidetone_level = Some(saved_level);
+                            st.config.hardware.sidetone_level = resolved_level;
+                        }
+                        st.telemetry.sidetone_level = Some(resolved_level);
                         let _ = self.handle.config_manager.save_config(&st.config);
                         st.touch();
                     }
 
-                    send_report_if_connected(&report, usb_handle, false)?;
+                    send_report_if_connected(&report, usb_handle, save_to_flash)?;
                     Ok(resolved_level)
                 })();
                 self.handle.broadcast_state("sidetone");

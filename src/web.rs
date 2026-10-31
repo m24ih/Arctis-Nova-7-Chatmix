@@ -593,41 +593,33 @@ fn find_json_value_slice<'a>(json: &'a str, key: &str) -> Option<&'a str> {
     let mut i = 0;
 
     while i < json.len() {
-        let ch = json[i..].chars().next().unwrap();
-        if escaped {
-            escaped = false;
+        let ch = json[i..].chars().next()?;
+        if in_string {
+            if escaped {
+                escaped = false;
+            } else if ch == '\\' {
+                escaped = true;
+            } else if ch == '"' {
+                in_string = false;
+            }
             i += ch.len_utf8();
             continue;
         }
-        if ch == '\\' {
-            escaped = true;
-            i += ch.len_utf8();
-            continue;
-        }
-        if !in_string {
+
+        if ch == '"' {
             if json[i..].starts_with(&needle) {
                 let after_key = i + needle.len();
-                if after_key < json.len() {
-                    let rest = json[after_key..].trim_start();
-                    if rest.starts_with(':') {
-                        return Some(rest[1..].trim_start());
-                    }
+                let rest = json[after_key..].trim_start();
+                if let Some(after_colon) = rest.strip_prefix(':') {
+                    return Some(after_colon.trim_start());
                 }
             }
-            if ch == '"' {
-                in_string = true;
-                i += ch.len_utf8();
-                continue;
-            }
+            in_string = true;
             i += ch.len_utf8();
-        } else {
-            if ch == '"' {
-                in_string = false;
-                i += ch.len_utf8();
-                continue;
-            }
-            i += ch.len_utf8();
+            continue;
         }
+
+        i += ch.len_utf8();
     }
     None
 }
