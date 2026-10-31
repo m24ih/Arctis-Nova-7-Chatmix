@@ -56,9 +56,26 @@ where
     target
 }
 
-/// Opens the first connected supported Arctis Nova 7 HID device via `hidapi` and returns `(HidDevice, product_id)`.
+pub(crate) const VENDOR_USAGE_PAGE: u16 = 0xFFC0;
+
+/// Opens the connected supported Arctis Nova 7 vendor HID device (`usage_page == 0xFFC0`) via `hidapi`
+/// and returns `(HidDevice, product_id)`. Falls back to `api.open(VENDOR_ID, pid)` if `usage_page`
+/// metadata is not populated by the OS backend.
 pub(crate) fn open_hidapi_device() -> Result<(HidDevice, u16)> {
     let api = HidApi::new().context("Failed to initialize HidApi")?;
+
+    // Prefer the vendor-defined HID interface (usage_page 0xFFC0, typically interface 3 / hidraw4)
+    for info in api.device_list() {
+        let vid = info.vendor_id();
+        let pid = info.product_id();
+        if is_supported_device(vid, pid) && info.usage_page() == VENDOR_USAGE_PAGE {
+            if let Ok(dev) = info.open_device(&api) {
+                return Ok((dev, pid));
+            }
+        }
+    }
+
+    // Fallback: open first matching device by VID:PID
     for &pid in SUPPORTED_PRODUCT_IDS {
         if let Ok(dev) = api.open(VENDOR_ID, pid) {
             return Ok((dev, pid));

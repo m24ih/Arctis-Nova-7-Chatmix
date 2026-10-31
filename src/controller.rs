@@ -281,11 +281,23 @@ impl ArctisController {
         let is_percentage_device = is_percentage_battery_device(product_id);
         let mut last_status_poll = Instant::now();
 
+        if let Ok(Some(event)) = crate::usb::hidapi_request_status() {
+            if telemetry.apply_event(&event) {
+                info!("Headset Telemetry: {}", telemetry.summary_line());
+            }
+        }
+
         while self.running.load(Ordering::SeqCst) {
             if poll_interval_secs > 0
                 && last_status_poll.elapsed() >= Duration::from_secs(poll_interval_secs)
             {
-                let _ = rusb_request_status(handle, interface_num);
+                if let Ok(Some(event)) = crate::usb::hidapi_request_status() {
+                    if telemetry.apply_event(&event) {
+                        info!("Headset Telemetry: {}", telemetry.summary_line());
+                    }
+                } else {
+                    let _ = rusb_request_status(handle, interface_num);
+                }
                 last_status_poll = Instant::now();
             }
 

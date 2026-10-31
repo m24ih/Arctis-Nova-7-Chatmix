@@ -47,6 +47,7 @@ OPTIONS:
     --mute-led <0..3>              Set microphone mute LED brightness (0..3, 0xAE)
     --bt-power <on|off>            Set Bluetooth power-on default (0xB2)
     --bt-call <MODE>               Set Bluetooth call behavior: do_nothing, attenuate_12db, mute_game (0xB3)
+    --apply-config                 Apply all hardware settings & active EQ from config.toml
     --save-flash                   Persist current settings to headset onboard flash (0x09)
     -h, --help                     Print this help message"
     );
