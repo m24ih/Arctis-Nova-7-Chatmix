@@ -1,0 +1,2134 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Arctis Nova 7 — Hardware DSP &amp; ChatMix Console</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg-base: #0b0e14;
+      --bg-panel: #131822;
+      --bg-panel-alt: #181f2c;
+      --bg-input: #0e131b;
+      --border: #252e42;
+      --border-highlight: #364360;
+      --text-main: #e6edf3;
+      --text-muted: #8b9bb4;
+      --text-dim: #5d6d85;
+      --accent: #ff5500;
+      --accent-hover: #ff6e26;
+      --accent-soft: rgba(255, 85, 0, 0.14);
+      --cyan: #00b4d8;
+      --cyan-soft: rgba(0, 180, 216, 0.14);
+      --green: #10b981;
+      --green-soft: rgba(16, 185, 129, 0.14);
+      --amber: #f59e0b;
+      --amber-soft: rgba(245, 158, 11, 0.14);
+      --red: #ef4444;
+      --red-soft: rgba(239, 68, 68, 0.16);
+      --radius: 10px;
+      --radius-sm: 6px;
+      --shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+      --font-sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Ubuntu, sans-serif;
+      --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+      accent-color: var(--accent);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-base);
+      background-image:
+        radial-gradient(circle at 12% 0%, rgba(255, 85, 0, 0.07), transparent 35%),
+        radial-gradient(circle at 88% 0%, rgba(0, 180, 216, 0.06), transparent 35%);
+      color: var(--text-main);
+      font-family: var(--font-sans);
+      font-size: 14px;
+      line-height: 1.5;
+      min-height: 100vh;
+      padding-bottom: 3rem;
+    }
+
+    /* --- Syncthing-inspired Top Navbar --- */
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: rgba(19, 24, 34, 0.92);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--border);
+      padding: 0.75rem 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .brand-icon {
+      width: 34px;
+      height: 34px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, #ff5500, #ff8800);
+      display: grid;
+      place-items: center;
+      color: #fff;
+      font-weight: 800;
+      font-size: 15px;
+      box-shadow: 0 2px 10px rgba(255, 85, 0, 0.35);
+    }
+
+    .brand-title {
+      font-weight: 700;
+      font-size: 1.05rem;
+      letter-spacing: -0.01em;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .brand-sub {
+      font-size: 0.76rem;
+      color: var(--text-muted);
+      font-family: var(--font-mono);
+    }
+
+    .topbar-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      flex-wrap: wrap;
+    }
+
+    /* --- Pills & Badges --- */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.28rem 0.65rem;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      border: 1px solid var(--border);
+      background: var(--bg-panel-alt);
+      color: var(--text-muted);
+      font-family: var(--font-mono);
+    }
+
+    .badge-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--text-dim);
+    }
+
+    .badge.ok {
+      color: var(--green);
+      background: var(--green-soft);
+      border-color: rgba(16, 185, 129, 0.3);
+    }
+    .badge.ok .badge-dot {
+      background: var(--green);
+      box-shadow: 0 0 8px var(--green);
+    }
+
+    .badge.warn {
+      color: var(--amber);
+      background: var(--amber-soft);
+      border-color: rgba(245, 158, 11, 0.3);
+    }
+    .badge.warn .badge-dot {
+      background: var(--amber);
+    }
+
+    .badge.err {
+      color: var(--red);
+      background: var(--red-soft);
+      border-color: rgba(239, 68, 68, 0.3);
+    }
+    .badge.err .badge-dot {
+      background: var(--red);
+    }
+
+    /* --- Buttons --- */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.45rem;
+      padding: 0.45rem 0.85rem;
+      border-radius: var(--radius-sm);
+      font-size: 0.82rem;
+      font-weight: 600;
+      border: 1px solid var(--border);
+      background: var(--bg-panel-alt);
+      color: var(--text-main);
+      cursor: pointer;
+      transition: all 0.15s ease;
+      font-family: inherit;
+    }
+
+    .btn:hover {
+      border-color: var(--border-highlight);
+      background: #20293a;
+    }
+
+    .btn:active {
+      transform: translateY(1px);
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+
+    .btn-primary:hover {
+      background: var(--accent-hover);
+      border-color: var(--accent-hover);
+    }
+
+    .btn-flash {
+      background: rgba(255, 85, 0, 0.14);
+      border-color: rgba(255, 85, 0, 0.45);
+      color: #ff7a33;
+    }
+
+    .btn-flash:hover {
+      background: rgba(255, 85, 0, 0.24);
+      border-color: var(--accent);
+      color: #fff;
+    }
+
+    /* --- Layout Container --- */
+    .container {
+      max-width: 1320px;
+      margin: 1.25rem auto 0;
+      padding: 0 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+
+    .grid-top {
+      display: grid;
+      grid-template-columns: 1.15fr 1fr;
+      gap: 1.25rem;
+    }
+
+    @media (max-width: 960px) {
+      .grid-top {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* --- Syncthing-like Cards --- */
+    .card {
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .card-header {
+      padding: 0.85rem 1.15rem;
+      background: var(--bg-panel-alt);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+
+    .card-title {
+      font-size: 0.92rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      color: var(--text-main);
+    }
+
+    .opcode-tag {
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      font-weight: 600;
+      padding: 0.1rem 0.42rem;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--text-muted);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .card-body {
+      padding: 1.15rem;
+    }
+
+    /* --- Telemetry Tiles --- */
+    .telemetry-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 0.85rem;
+    }
+
+    @media (max-width: 540px) {
+      .telemetry-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .stat-tile {
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 0.85rem 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+
+    .stat-label {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      font-weight: 600;
+    }
+
+    .stat-value {
+      font-size: 1.35rem;
+      font-weight: 700;
+      font-family: var(--font-mono);
+      display: flex;
+      align-items: baseline;
+      gap: 0.45rem;
+    }
+
+    .stat-sub {
+      font-size: 0.76rem;
+      color: var(--text-muted);
+    }
+
+    .battery-bar-wrap {
+      height: 8px;
+      background: #1a2232;
+      border-radius: 999px;
+      overflow: hidden;
+      margin-top: 0.25rem;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .battery-bar-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--green), #34d399);
+      transition: width 0.35s ease, background 0.35s ease;
+    }
+
+    /* --- ChatMix Dial & Balance --- */
+    .chatmix-layout {
+      display: grid;
+      grid-template-columns: 140px 1fr;
+      gap: 1.15rem;
+      align-items: center;
+    }
+
+    @media (max-width: 520px) {
+      .chatmix-layout {
+        grid-template-columns: 1fr;
+        justify-items: center;
+      }
+    }
+
+    .dial-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.35rem;
+    }
+
+    .chatmix-channels {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 0.85rem;
+    }
+
+    .channel-row {
+      display: flex;
+      flex-direction: column;
+      gap: 0.3rem;
+    }
+
+    .channel-header {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.82rem;
+      font-weight: 600;
+    }
+
+    .channel-pct {
+      font-family: var(--font-mono);
+      font-weight: 700;
+    }
+
+    .meter-track {
+      height: 12px;
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .meter-fill-game {
+      height: 100%;
+      background: linear-gradient(90deg, #ff5500, #ff8800);
+      transition: width 0.12s ease-out;
+    }
+
+    .meter-fill-chat {
+      height: 100%;
+      background: linear-gradient(90deg, #0077b6, #00b4d8);
+      transition: width 0.12s ease-out;
+    }
+
+    /* --- 10-Band Parametric EQ Section --- */
+    .eq-curve-box {
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 0.5rem;
+      margin-bottom: 1rem;
+      position: relative;
+    }
+
+    .eq-svg {
+      width: 100%;
+      height: 155px;
+      display: block;
+    }
+
+    .eq-bands-grid {
+      display: grid;
+      grid-template-columns: repeat(10, minmax(74px, 1fr));
+      gap: 0.55rem;
+      overflow-x: auto;
+      padding-bottom: 0.35rem;
+    }
+
+    .eq-band-strip {
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 0.6rem 0.4rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.45rem;
+      transition: border-color 0.15s ease;
+    }
+
+    .eq-band-strip:hover,
+    .eq-band-strip:focus-within {
+      border-color: var(--border-highlight);
+    }
+
+    .eq-gain-badge {
+      font-family: var(--font-mono);
+      font-size: 0.76rem;
+      font-weight: 700;
+      padding: 0.15rem 0.4rem;
+      border-radius: 4px;
+      background: var(--bg-panel-alt);
+      border: 1px solid var(--border);
+      color: var(--text-main);
+      cursor: pointer;
+      user-select: none;
+      min-width: 58px;
+      text-align: center;
+    }
+
+    .eq-gain-badge.pos {
+      color: #ff7a33;
+      border-color: rgba(255, 85, 0, 0.35);
+      background: var(--accent-soft);
+    }
+
+    .eq-gain-badge.neg {
+      color: var(--cyan);
+      border-color: rgba(0, 180, 216, 0.35);
+      background: var(--cyan-soft);
+    }
+
+    .eq-slider-holder {
+      height: 150px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0.25rem 0;
+    }
+
+    /* Native accessible vertical range input */
+    input[type="range"].eq-vslider {
+      writing-mode: vertical-lr;
+      direction: rtl;
+      width: 24px;
+      height: 138px;
+      accent-color: var(--accent);
+      cursor: pointer;
+      background: transparent;
+    }
+
+    .eq-freq-label {
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    .eq-sub-control {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+      border-top: 1px solid var(--border);
+      padding-top: 0.4rem;
+    }
+
+    .eq-sub-label {
+      font-size: 0.65rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      display: flex;
+      justify-content: space-between;
+      font-family: var(--font-mono);
+    }
+
+    .eq-q-input,
+    .eq-filter-select {
+      width: 100%;
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--text-main);
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      padding: 0.18rem 0.25rem;
+      text-align: center;
+    }
+
+    .eq-raw-byte {
+      font-family: var(--font-mono);
+      font-size: 0.65rem;
+      color: var(--text-dim);
+    }
+
+    /* --- Presets Catalog --- */
+    .presets-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      flex-wrap: wrap;
+      margin-bottom: 1rem;
+    }
+
+    .preset-category-tabs {
+      display: flex;
+      gap: 0.4rem;
+      flex-wrap: wrap;
+    }
+
+    .tab-btn {
+      padding: 0.32rem 0.75rem;
+      border-radius: 999px;
+      font-size: 0.76rem;
+      font-weight: 600;
+      border: 1px solid var(--border);
+      background: var(--bg-input);
+      color: var(--text-muted);
+      cursor: pointer;
+    }
+
+    .tab-btn.active {
+      background: var(--accent-soft);
+      border-color: var(--accent);
+      color: #ff7a33;
+    }
+
+    .presets-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(235px, 1fr));
+      gap: 0.75rem;
+    }
+
+    .preset-card {
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 0.75rem 0.9rem;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 0.55rem;
+      text-align: left;
+    }
+
+    .preset-card:hover {
+      border-color: var(--border-highlight);
+      background: #141b28;
+    }
+
+    .preset-card.active {
+      border-color: var(--accent);
+      background: rgba(255, 85, 0, 0.08);
+      box-shadow: inset 0 0 0 1px rgba(255, 85, 0, 0.25);
+    }
+
+    .preset-card-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+    }
+
+    .preset-name {
+      font-weight: 700;
+      font-size: 0.88rem;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .preset-tag {
+      font-size: 0.66rem;
+      font-family: var(--font-mono);
+      padding: 0.1rem 0.38rem;
+      border-radius: 4px;
+      background: var(--bg-panel-alt);
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+    }
+
+    .preset-desc {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      line-height: 1.35;
+    }
+
+    .preset-mini-bars {
+      display: grid;
+      grid-template-columns: repeat(10, 1fr);
+      gap: 3px;
+      height: 24px;
+      align-items: center;
+      padding-top: 0.2rem;
+    }
+
+    .preset-mini-bar {
+      background: var(--border-highlight);
+      border-radius: 2px;
+      min-height: 3px;
+    }
+
+    .preset-card.active .preset-mini-bar {
+      background: var(--accent);
+    }
+
+    .save-profile-bar {
+      margin-top: 1rem;
+      padding-top: 0.9rem;
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+      flex-wrap: wrap;
+    }
+
+    .input-text {
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text-main);
+      padding: 0.42rem 0.7rem;
+      font-size: 0.82rem;
+      font-family: inherit;
+    }
+
+    .input-text:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    /* --- Hardware Controls Grid --- */
+    .hw-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+      gap: 0.9rem;
+    }
+
+    .hw-item {
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 0.9rem 1rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 0.65rem;
+    }
+
+    .hw-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 0.5rem;
+    }
+
+    .hw-title {
+      font-weight: 700;
+      font-size: 0.86rem;
+    }
+
+    .hw-desc {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    .seg-group {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(60px, 1fr));
+      gap: 0.35rem;
+      background: var(--bg-panel);
+      padding: 0.25rem;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+    }
+
+    .seg-btn {
+      padding: 0.36rem 0.45rem;
+      border: none;
+      border-radius: 4px;
+      background: transparent;
+      color: var(--text-muted);
+      font-size: 0.76rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.12s ease;
+      font-family: inherit;
+    }
+
+    .seg-btn:hover {
+      color: var(--text-main);
+    }
+
+    .seg-btn.active {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .range-row {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .range-row input[type="range"] {
+      flex: 1;
+      accent-color: var(--accent);
+      cursor: pointer;
+    }
+
+    .range-val {
+      font-family: var(--font-mono);
+      font-size: 0.82rem;
+      font-weight: 700;
+      min-width: 64px;
+      text-align: right;
+      color: var(--accent);
+    }
+
+    /* Toggle Switch */
+    .switch-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+    }
+
+    .toggle-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.55rem;
+      cursor: pointer;
+      font-size: 0.82rem;
+      font-weight: 600;
+    }
+
+    .toggle-label input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      accent-color: var(--accent);
+      cursor: pointer;
+    }
+
+    /* Toast Notification */
+    #toast-container {
+      position: fixed;
+      bottom: 1.25rem;
+      right: 1.25rem;
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .toast {
+      background: var(--bg-panel-alt);
+      border: 1px solid var(--border-highlight);
+      border-left: 4px solid var(--accent);
+      color: var(--text-main);
+      padding: 0.65rem 1rem;
+      border-radius: var(--radius-sm);
+      box-shadow: var(--shadow);
+      font-size: 0.82rem;
+      font-weight: 600;
+      animation: slideIn 0.18s ease-out;
+    }
+
+    .toast.err {
+      border-left-color: var(--red);
+    }
+
+    @keyframes slideIn {
+      from { transform: translateY(10px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Navigation & Live Status Header -->
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-icon">SS</div>
+      <div>
+        <div class="brand-title">
+          Arctis Nova 7
+          <span class="opcode-tag">USB HID + GAIA DSP</span>
+        </div>
+        <div class="brand-sub" id="device-sub-label">127.0.0.1:3927 • PipeWire ChatMix &amp; 10-Band EQ Daemon</div>
+      </div>
+    </div>
+
+    <div class="topbar-actions">
+      <div class="badge" id="sse-badge" title="Server-Sent Events (/api/events)">
+        <span class="badge-dot"></span>
+        <span id="sse-badge-text">SSE Connecting…</span>
+      </div>
+      <div class="badge" id="usb-badge" title="USB Receiver Connection">
+        <span class="badge-dot"></span>
+        <span id="usb-badge-text">USB Checking…</span>
+      </div>
+      <button type="button" class="btn" id="btn-poll-status" title="Send 0xB0 Status Request">
+        ↻ Poll Status (0xB0)
+      </button>
+      <button type="button" class="btn btn-flash" id="btn-save-flash-top" title="Persist current EQ &amp; hardware settings to headset onboard flash (0x09)">
+        ⚡ Save to Flash (0x09)
+      </button>
+    </div>
+  </header>
+
+  <main class="container">
+
+    <!-- Top Row: Live Telemetry + Real-time ChatMix -->
+    <div class="grid-top">
+
+      <!-- Card 1: Headset Live Telemetry -->
+      <section class="card" aria-labelledby="hdr-telemetry">
+        <div class="card-header">
+          <div class="card-title" id="hdr-telemetry">
+            Live Headset Telemetry
+            <span class="opcode-tag">0xB0 · 0xB7 · 0xB9 · 0xBB · 0x52</span>
+          </div>
+          <span class="stat-sub" id="last-updated-label">Waiting for telemetry…</span>
+        </div>
+        <div class="card-body">
+          <div class="telemetry-grid">
+
+            <!-- Battery 0xB7 -->
+            <div class="stat-tile">
+              <div class="stat-label">
+                <span>Battery Level</span>
+                <span class="opcode-tag">0xB7</span>
+              </div>
+              <div class="stat-value">
+                <span id="val-battery">--%</span>
+                <span class="stat-sub" id="val-battery-raw"></span>
+              </div>
+              <div class="battery-bar-wrap" role="progressbar" aria-valuemin="0" aria-valuemax="100" id="battery-progress">
+                <div class="battery-bar-fill" id="battery-bar"></div>
+              </div>
+            </div>
+
+            <!-- Charging 0xBB -->
+            <div class="stat-tile">
+              <div class="stat-label">
+                <span>Power &amp; Charging</span>
+                <span class="opcode-tag">0xBB</span>
+              </div>
+              <div class="stat-value" id="val-charging">Unknown</div>
+              <div class="stat-sub" id="val-charging-sub">USB-C Charging State</div>
+            </div>
+
+            <!-- 2.4GHz Wireless 0xB9 -->
+            <div class="stat-tile">
+              <div class="stat-label">
+                <span>2.4 GHz Link</span>
+                <span class="opcode-tag">0xB9</span>
+              </div>
+              <div class="stat-value" id="val-wireless">Disconnected</div>
+              <div class="stat-sub" id="val-pid">VID 0x1038</div>
+            </div>
+
+            <!-- Microphone Mute 0x52 -->
+            <div class="stat-tile">
+              <div class="stat-label">
+                <span>ClearCast Mic</span>
+                <span class="opcode-tag">0x52</span>
+              </div>
+              <div class="stat-value" id="val-mic-mute">Unknown</div>
+              <div class="stat-sub" id="val-mic-sub">Hardware Mute Button</div>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+      <!-- Card 2: Real-Time ChatMix Dial & Balance -->
+      <section class="card" aria-labelledby="hdr-chatmix">
+        <div class="card-header">
+          <div class="card-title" id="hdr-chatmix">
+            Real-Time ChatMix Balance
+            <span class="opcode-tag">0x45 · PipeWire Sinks</span>
+          </div>
+          <span class="badge ok" id="chatmix-bias-badge">Center Detent</span>
+        </div>
+        <div class="card-body">
+          <div class="chatmix-layout">
+            <div class="dial-wrap">
+              <svg width="124" height="124" viewBox="0 0 120 120" aria-label="ChatMix Rotary Dial">
+                <circle cx="60" cy="60" r="48" fill="#0e131b" stroke="#252e42" stroke-width="8" />
+                <!-- Game Arc (Left) -->
+                <path d="M 26 94 A 48 48 0 0 1 60 12" fill="none" stroke="#ff5500" stroke-width="5" stroke-linecap="round" opacity="0.7" />
+                <!-- Chat Arc (Right) -->
+                <path d="M 60 12 A 48 48 0 0 1 94 94" fill="none" stroke="#00b4d8" stroke-width="5" stroke-linecap="round" opacity="0.7" />
+                <!-- Center tick -->
+                <line x1="60" y1="4" x2="60" y2="12" stroke="#e6edf3" stroke-width="2" />
+                <!-- Pointer needle -->
+                <g id="chatmix-needle" transform="rotate(0 60 60)">
+                  <line x1="60" y1="60" x2="60" y2="20" stroke="#ff5500" stroke-width="4" stroke-linecap="round" />
+                  <circle cx="60" cy="60" r="7" fill="#e6edf3" />
+                </g>
+                <text x="20" y="113" fill="#ff7a33" font-size="9" font-family="monospace" font-weight="700">GAME</text>
+                <text x="74" y="113" fill="#00b4d8" font-size="9" font-family="monospace" font-weight="700">CHAT</text>
+              </svg>
+            </div>
+
+            <div class="chatmix-channels">
+              <div class="channel-row">
+                <div class="channel-header">
+                  <span>🎮 Game Sink (<code>Arctis_Game</code>)</span>
+                  <span class="channel-pct" id="val-game-vol" style="color: #ff7a33;">100%</span>
+                </div>
+                <div class="meter-track">
+                  <div class="meter-fill-game" id="bar-game-vol" style="width: 100%;"></div>
+                </div>
+              </div>
+
+              <div class="channel-row">
+                <div class="channel-header">
+                  <span>💬 Chat Sink (<code>Arctis_Chat</code>)</span>
+                  <span class="channel-pct" id="val-chat-vol" style="color: #00b4d8;">100%</span>
+                </div>
+                <div class="meter-track">
+                  <div class="meter-fill-chat" id="bar-chat-vol" style="width: 100%;"></div>
+                </div>
+              </div>
+
+              <div class="stat-sub">
+                Physical headset ChatMix wheel adjusts PipeWire virtual sinks in real time via USB interrupt endpoint.
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- Middle Section: 10-Band Hardware Parametric Equalizer -->
+    <section class="card" aria-labelledby="hdr-eq">
+      <div class="card-header">
+        <div class="card-title" id="hdr-eq">
+          10-Band Hardware Parametric Equalizer
+          <span class="opcode-tag">USB 0x33 · GAIA 0x0933</span>
+          <span class="badge ok" id="active-eq-badge">Active: harman</span>
+        </div>
+
+        <div class="topbar-actions">
+          <label class="toggle-label" title="Immediately send 0x33 HID report while dragging sliders">
+            <input type="checkbox" id="chk-live-eq" checked />
+            <span>Instant Live Apply</span>
+          </label>
+          <button type="button" class="btn" id="btn-eq-flat" title="Reset all 10 bands to 0.0 dB">
+            Reset 0 dB
+          </button>
+          <button type="button" class="btn btn-primary" id="btn-eq-apply" title="Send 10-band EQ to headset DSP (0x33)">
+            Apply EQ (0x33)
+          </button>
+          <button type="button" class="btn btn-flash" id="btn-eq-flash" title="Persist active EQ to onboard flash (0x09)">
+            ⚡ Save to Flash
+          </button>
+        </div>
+      </div>
+
+      <div class="card-body">
+        <!-- Interactive Frequency Response Curve Preview -->
+        <div class="eq-curve-box">
+          <svg class="eq-svg" id="eq-curve-svg" viewBox="0 0 1000 160" preserveAspectRatio="none">
+            <!-- Horizontal grid lines (+10, +5, 0, -5, -10 dB) -->
+            <line x1="0" y1="15" x2="1000" y2="15" stroke="#1f2839" stroke-width="1" />
+            <line x1="0" y1="47.5" x2="1000" y2="47.5" stroke="#1f2839" stroke-width="1" stroke-dasharray="4 4" />
+            <line x1="0" y1="80" x2="1000" y2="80" stroke="#33415c" stroke-width="1.5" />
+            <line x1="0" y1="112.5" x2="1000" y2="112.5" stroke="#1f2839" stroke-width="1" stroke-dasharray="4 4" />
+            <line x1="0" y1="145" x2="1000" y2="145" stroke="#1f2839" stroke-width="1" />
+            <text x="8" y="13" fill="#5d6d85" font-size="10" font-family="monospace">+10 dB</text>
+            <text x="8" y="77" fill="#8b9bb4" font-size="10" font-family="monospace">0 dB</text>
+            <text x="8" y="142" fill="#5d6d85" font-size="10" font-family="monospace">-10 dB</text>
+            <!-- Shaded area under curve -->
+            <path id="eq-curve-area" d="" fill="rgba(255, 85, 0, 0.14)" />
+            <!-- Smooth spline curve -->
+            <path id="eq-curve-path" d="" fill="none" stroke="#ff5500" stroke-width="3" stroke-linecap="round" />
+            <!-- Band node dots -->
+            <g id="eq-curve-dots"></g>
+          </svg>
+        </div>
+
+        <!-- 10 Vertical Parametric Sliders -->
+        <div class="eq-bands-grid" id="eq-sliders-container"></div>
+      </div>
+    </section>
+
+    <!-- Game & Audio EQ Presets Catalog + Custom Profile Manager -->
+    <section class="card" aria-labelledby="hdr-presets">
+      <div class="card-header">
+        <div class="card-title" id="hdr-presets">
+          Game &amp; Reference EQ Presets Catalog
+          <span class="opcode-tag">~/.config/arctis-nova-7/profiles/*.toml</span>
+        </div>
+        <div class="preset-category-tabs" id="preset-tabs">
+          <button type="button" class="tab-btn active" data-cat="all">All Presets</button>
+          <button type="button" class="tab-btn" data-cat="esports">Competitive Esports &amp; FPS</button>
+          <button type="button" class="tab-btn" data-cat="rpg">Action / RPG / Cinema</button>
+          <button type="button" class="tab-btn" data-cat="audio">Audiophile &amp; Reference</button>
+          <button type="button" class="tab-btn" data-cat="custom">Custom Saved</button>
+        </div>
+      </div>
+
+      <div class="card-body">
+        <div class="presets-grid" id="presets-grid"></div>
+
+        <!-- Save Custom User Profile to XDG ~/.config/arctis-nova-7/profiles/*.toml -->
+        <form class="save-profile-bar" id="form-save-profile">
+          <strong style="font-size: 0.82rem;">Save Current Curve as Profile:</strong>
+          <input
+            type="text"
+            class="input-text"
+            id="inp-profile-name"
+            placeholder="Profile name (e.g. my_cs2_custom)"
+            required
+            pattern="[A-Za-z0-9_\-]+"
+            title="Alphanumeric, underscores, or hyphens"
+            style="width: 220px;"
+          />
+          <input
+            type="text"
+            class="input-text"
+            id="inp-profile-desc"
+            placeholder="Short description (optional)"
+            style="flex: 1; min-width: 220px;"
+          />
+          <button type="submit" class="btn btn-primary">
+            💾 Save &amp; Activate (.toml)
+          </button>
+        </form>
+      </div>
+    </section>
+
+    <!-- Hardware Settings & Bluetooth Controls -->
+    <section class="card" aria-labelledby="hdr-hardware">
+      <div class="card-header">
+        <div class="card-title" id="hdr-hardware">
+          Hardware DSP, Microphone &amp; Bluetooth Controls
+          <span class="opcode-tag">0x39 · 0x37 · 0x3A · 0xA3 · 0xAE · 0xB2 · 0xB3</span>
+        </div>
+        <button type="button" class="btn btn-flash" id="btn-hw-save-flash">
+          ⚡ Persist All to Flash (0x09)
+        </button>
+      </div>
+
+      <div class="card-body">
+        <div class="hw-grid">
+
+          <!-- 1. Sidetone (0x39) -->
+          <div class="hw-item">
+            <div class="hw-head">
+              <div>
+                <div class="hw-title">Sidetone Monitoring</div>
+                <div class="hw-desc">Real-time microphone feedback in earcups</div>
+              </div>
+              <span class="opcode-tag">0x39</span>
+            </div>
+            <div class="seg-group" id="seg-sidetone" role="group" aria-label="Sidetone Level">
+              <button type="button" class="seg-btn" data-level="0">Off (0)</button>
+              <button type="button" class="seg-btn" data-level="1">Low (1)</button>
+              <button type="button" class="seg-btn" data-level="2">Med (2)</button>
+              <button type="button" class="seg-btn" data-level="3">High (3)</button>
+            </div>
+          </div>
+
+          <!-- 2. Microphone Gain (0x37) -->
+          <div class="hw-item">
+            <div class="hw-head">
+              <div>
+                <div class="hw-title">Microphone Hardware Gain</div>
+                <div class="hw-desc">ClearCast Gen 2 ADC pre-amp (12 = 75% optimal)</div>
+              </div>
+              <span class="opcode-tag">0x37</span>
+            </div>
+            <div class="range-row">
+              <input type="range" id="rng-mic-gain" min="0" max="15" step="1" value="12" aria-label="Microphone Gain" />
+              <span class="range-val" id="lbl-mic-gain">12 / 15</span>
+            </div>
+          </div>
+
+          <!-- 3. Volume Limiter (0x3A) -->
+          <div class="hw-item">
+            <div class="hw-head">
+              <div>
+                <div class="hw-title">EU Volume Limiter</div>
+                <div class="hw-desc">Hardware acoustic output cap (Disable for full headroom)</div>
+              </div>
+              <span class="opcode-tag">0x3A</span>
+            </div>
+            <div class="switch-row">
+              <label class="toggle-label">
+                <input type="checkbox" id="chk-volume-limiter" />
+                <span id="lbl-volume-limiter">Disabled (Full Output)</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- 4. Inactivity Sleep Timer (0xA3) -->
+          <div class="hw-item">
+            <div class="hw-head">
+              <div>
+                <div class="hw-title">Inactivity Auto-Shutoff Timer</div>
+                <div class="hw-desc">Minutes before headset powers down when idle (0 = Never)</div>
+              </div>
+              <span class="opcode-tag">0xA3</span>
+            </div>
+            <div class="range-row">
+              <input type="range" id="rng-inactivity" min="0" max="90" step="5" value="30" aria-label="Inactivity Sleep Timer Minutes" />
+              <span class="range-val" id="lbl-inactivity">30 min</span>
+            </div>
+          </div>
+
+          <!-- 5. Mic Mute LED Brightness (0xAE) -->
+          <div class="hw-item">
+            <div class="hw-head">
+              <div>
+                <div class="hw-title">Mic Boom Mute LED Brightness</div>
+                <div class="hw-desc">Red LED ring intensity when microphone is muted</div>
+              </div>
+              <span class="opcode-tag">0xAE</span>
+            </div>
+            <div class="seg-group" id="seg-mute-led" role="group" aria-label="Mute LED Brightness">
+              <button type="button" class="seg-btn" data-led="0">Off (0)</button>
+              <button type="button" class="seg-btn" data-led="1">Low (1)</button>
+              <button type="button" class="seg-btn" data-led="2">Med (2)</button>
+              <button type="button" class="seg-btn" data-led="3">High (3)</button>
+            </div>
+          </div>
+
+          <!-- 6. Bluetooth Power-On Default (0xB2) -->
+          <div class="hw-item">
+            <div class="hw-head">
+              <div>
+                <div class="hw-title">Bluetooth Auto Power-On</div>
+                <div class="hw-desc">Automatically enable Bluetooth radio on headset boot</div>
+              </div>
+              <span class="opcode-tag">0xB2</span>
+            </div>
+            <div class="switch-row">
+              <label class="toggle-label">
+                <input type="checkbox" id="chk-bt-power" />
+                <span id="lbl-bt-power">Disabled on Boot</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- 7. Bluetooth Call Mixing Behavior (0xB3) -->
+          <div class="hw-item">
+            <div class="hw-head">
+              <div>
+                <div class="hw-title">Bluetooth Call Audio Mixing</div>
+                <div class="hw-desc">2.4 GHz Game audio attenuation during active phone call</div>
+              </div>
+              <span class="opcode-tag">0xB3</span>
+            </div>
+            <div class="seg-group" id="seg-bt-call" role="group" aria-label="Bluetooth Call Behavior">
+              <button type="button" class="seg-btn" data-call="do_nothing">Keep 100%</button>
+              <button type="button" class="seg-btn" data-call="attenuate_12db">-12 dB Duck</button>
+              <button type="button" class="seg-btn" data-call="mute_game">Mute 2.4G</button>
+            </div>
+          </div>
+
+          <!-- 8. Daemon Persistence Behavior -->
+          <div class="hw-item">
+            <div class="hw-head">
+              <div>
+                <div class="hw-title">Daemon Reconnect &amp; Flash Policy</div>
+                <div class="hw-desc">Automatic profile sync when USB dongle reconnects</div>
+              </div>
+              <span class="opcode-tag">XDG Config</span>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 0.45rem;">
+              <label class="toggle-label">
+                <input type="checkbox" id="chk-auto-apply" checked />
+                <span>Auto-apply EQ &amp; hardware config on USB connect</span>
+              </label>
+              <label class="toggle-label">
+                <input type="checkbox" id="chk-auto-flash" />
+                <span>Auto-commit changes to onboard flash (0x09)</span>
+              </label>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <div id="toast-container" aria-live="polite"></div>
+
+  <script>
+    (() => {
+      const EQ_FREQS = [31, 62, 125, 250, 500, 1000, 2000, 4000, 8000, 16000];
+      const EQ_LABELS = ["31", "62", "125", "250", "500", "1k", "2k", "4k", "8k", "16k"];
+
+      // Rich built-in Game & Audio Presets catalog (merged with server /api/presets)
+      const BUILTIN_CATALOG = [
+        {
+          name: "flat",
+          title: "Flat Studio Reference",
+          category: "audio",
+          tag: "Reference",
+          description: "Neutral 0.0 dB reference response across all 10 hardware bands.",
+          gains_db: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+        },
+        {
+          name: "harman",
+          title: "Harman Target Audiophile",
+          category: "audio",
+          tag: "Music",
+          description: "Calibrated for Nova 7 drivers: cuts 250Hz mud and restores 4kHz presence.",
+          gains_db: [2.0, 1.0, -1.5, -2.0, 0.0, 0.5, 1.5, 2.5, -1.0, 1.5]
+        },
+        {
+          name: "fps",
+          title: "Competitive FPS Footsteps",
+          category: "esports",
+          tag: "Tactical FPS",
+          description: "Suppresses sub-bass explosion rumble and boosts 2–4 kHz footsteps & reload cues.",
+          gains_db: [-3.0, -1.5, -2.0, -2.5, 0.0, 1.0, 2.5, 4.0, 1.5, 0.0]
+        },
+        {
+          name: "cs2",
+          title: "Counter-Strike 2 (CS2)",
+          category: "esports",
+          tag: "CS2",
+          description: "Pinpoints boot steps, bomb defuse wires, and flash pin pulls while taming AWP/HE boom.",
+          gains_db: [-3.5, -2.0, -1.5, -2.0, 0.5, 2.0, 3.5, 4.5, 2.0, 0.5]
+        },
+        {
+          name: "valorant",
+          title: "Valorant Tactical",
+          category: "esports",
+          tag: "Valorant",
+          description: "Sharpens agent footsteps, spike plant/defuse cues, and ability audio callouts.",
+          gains_db: [-2.5, -1.5, -1.0, -1.5, 0.5, 1.5, 3.0, 3.5, 1.5, 0.0]
+        },
+        {
+          name: "apex",
+          title: "Apex Legends",
+          category: "esports",
+          tag: "Battle Royale",
+          description: "Separates multi-floor footsteps, zipline cues, and shield cracks from ambient wind.",
+          gains_db: [-3.0, -2.0, -1.5, -2.0, 0.0, 1.5, 3.5, 4.0, 2.5, 1.0]
+        },
+        {
+          name: "warzone",
+          title: "CoD: Warzone",
+          category: "esports",
+          tag: "Warzone",
+          description: "Cuts killstreak & vehicle sub-bass overload while elevating crate hum and sprinting steps.",
+          gains_db: [-4.0, -2.5, -1.5, -2.0, -0.5, 1.5, 3.0, 4.5, 2.0, 0.5]
+        },
+        {
+          name: "bg3",
+          title: "Baldur's Gate 3 & RPG",
+          category: "rpg",
+          tag: "Cinema RPG",
+          description: "Warm orchestral low-end, natural companion dialogue mids, and airy spellcasting highs.",
+          gains_db: [2.5, 2.0, 0.5, -1.0, 0.5, 1.0, 1.5, 2.0, 1.5, 2.0]
+        },
+        {
+          name: "bass",
+          title: "Warm Bass Boost",
+          category: "audio",
+          tag: "Bass",
+          description: "Deep sub-bass punch and low-end warmth without masking midrange vocals.",
+          gains_db: [3.5, 3.0, 2.0, 0.5, 0.0, 0.0, 0.5, 1.0, 1.0, 0.5]
+        },
+        {
+          name: "smiley",
+          title: "Classic V-Shape",
+          category: "rpg",
+          tag: "Dynamic",
+          description: "Energetic sub-bass and crisp treble lift for action games and electronic music.",
+          gains_db: [3.0, 2.0, 1.0, -1.0, -1.5, -1.0, 1.0, 2.5, 3.0, 2.0]
+        },
+        {
+          name: "vocal",
+          title: "Vocal & Podcast Clarity",
+          category: "audio",
+          tag: "Voice",
+          description: "Rolls off low rumble and elevates speech articulation between 500 Hz and 4 kHz.",
+          gains_db: [-3.0, -2.0, -1.0, 0.0, 1.5, 2.5, 3.0, 2.0, 0.5, -0.5]
+        }
+      ];
+
+      let currentBands = EQ_FREQS.map((f) => ({
+        frequency_hz: f,
+        gain_db: 0.0,
+        q_factor: 1.414,
+        filter_type: "peaking"
+      }));
+      let activeProfileName = "harman";
+      let serverPresets = [];
+      let selectedCategory = "all";
+      let isDraggingSlider = false;
+      let eqDebounceTimer = null;
+
+      function showToast(msg, isError = false) {
+        const container = document.getElementById("toast-container");
+        const el = document.createElement("div");
+        el.className = "toast" + (isError ? " err" : "");
+        el.textContent = msg;
+        container.appendChild(el);
+        setTimeout(() => el.remove(), 3200);
+      }
+
+      function encodeGainByte(gainDb) {
+        const clamped = Math.max(-10, Math.min(10, gainDb));
+        return Math.round(2 * (10 + clamped));
+      }
+
+      // Build 10-band slider strips
+      function initEqSliders() {
+        const container = document.getElementById("eq-sliders-container");
+        container.innerHTML = "";
+
+        currentBands.forEach((band, idx) => {
+          const strip = document.createElement("div");
+          strip.className = "eq-band-strip";
+          strip.innerHTML = `
+            <div class="eq-gain-badge" id="eq-badge-${idx}" title="Click to reset band to 0.0 dB">0.0 dB</div>
+            <div class="eq-slider-holder">
+              <input
+                type="range"
+                class="eq-vslider"
+                id="eq-slider-${idx}"
+                min="-10"
+                max="10"
+                step="0.5"
+                value="${band.gain_db}"
+                aria-label="${EQ_LABELS[idx]} Hz Gain dB"
+              />
+            </div>
+            <div class="eq-freq-label">${EQ_LABELS[idx]} Hz</div>
+            <div class="eq-raw-byte" id="eq-byte-${idx}">0x14</div>
+            <div class="eq-sub-control">
+              <div class="eq-sub-label"><span>Q</span></div>
+              <input
+                type="number"
+                class="eq-q-input"
+                id="eq-q-${idx}"
+                min="0.1"
+                max="10.0"
+                step="0.1"
+                value="${band.q_factor.toFixed(2)}"
+                aria-label="${EQ_LABELS[idx]} Hz Q Factor"
+              />
+              <select class="eq-filter-select" id="eq-flt-${idx}" aria-label="${EQ_LABELS[idx]} Hz Filter Type">
+                <option value="peaking">Peak</option>
+                <option value="low_shelf">LowShelf</option>
+                <option value="high_shelf">HighShelf</option>
+                <option value="low_pass">LowPass</option>
+                <option value="high_pass">HighPass</option>
+              </select>
+            </div>
+          `;
+          container.appendChild(strip);
+
+          const slider = strip.querySelector(`#eq-slider-${idx}`);
+          const badge = strip.querySelector(`#eq-badge-${idx}`);
+          const qInput = strip.querySelector(`#eq-q-${idx}`);
+          const fltSelect = strip.querySelector(`#eq-flt-${idx}`);
+
+          slider.addEventListener("pointerdown", () => { isDraggingSlider = true; });
+          slider.addEventListener("pointerup", () => { isDraggingSlider = false; });
+
+          slider.addEventListener("input", () => {
+            currentBands[idx].gain_db = parseFloat(slider.value) || 0.0;
+            updateEqUiFromState();
+            if (document.getElementById("chk-live-eq").checked) {
+              scheduleLiveEqApply();
+            }
+          });
+
+          badge.addEventListener("click", () => {
+            currentBands[idx].gain_db = 0.0;
+            slider.value = "0";
+            updateEqUiFromState();
+            if (document.getElementById("chk-live-eq").checked) {
+              scheduleLiveEqApply();
+            }
+          });
+
+          qInput.addEventListener("change", () => {
+            const val = Math.max(0.1, Math.min(10.0, parseFloat(qInput.value) || 1.414));
+            currentBands[idx].q_factor = val;
+            qInput.value = val.toFixed(2);
+            renderEqCurve();
+            if (document.getElementById("chk-live-eq").checked) {
+              scheduleLiveEqApply();
+            }
+          });
+
+          fltSelect.addEventListener("change", () => {
+            currentBands[idx].filter_type = fltSelect.value;
+            renderEqCurve();
+            if (document.getElementById("chk-live-eq").checked) {
+              scheduleLiveEqApply();
+            }
+          });
+        });
+
+        updateEqUiFromState();
+      }
+
+      function updateEqUiFromState() {
+        currentBands.forEach((band, idx) => {
+          const slider = document.getElementById(`eq-slider-${idx}`);
+          const badge = document.getElementById(`eq-badge-${idx}`);
+          const rawEl = document.getElementById(`eq-byte-${idx}`);
+          const qInput = document.getElementById(`eq-q-${idx}`);
+          const fltSelect = document.getElementById(`eq-flt-${idx}`);
+
+          if (slider && !isDraggingSlider) {
+            slider.value = String(band.gain_db);
+          }
+          if (badge) {
+            const sign = band.gain_db > 0 ? "+" : "";
+            badge.textContent = `${sign}${band.gain_db.toFixed(1)} dB`;
+            badge.className =
+              "eq-gain-badge" +
+              (band.gain_db > 0.05 ? " pos" : band.gain_db < -0.05 ? " neg" : "");
+          }
+          if (rawEl) {
+            const raw = encodeGainByte(band.gain_db);
+            rawEl.textContent = `0x${raw.toString(16).toUpperCase().padStart(2, "0")} (${raw})`;
+          }
+          if (qInput && document.activeElement !== qInput) {
+            qInput.value = (band.q_factor || 1.414).toFixed(2);
+          }
+          if (fltSelect && document.activeElement !== fltSelect) {
+            fltSelect.value = band.filter_type || "peaking";
+          }
+        });
+        renderEqCurve();
+      }
+
+      // Draw smooth parametric response curve across 10 bands
+      function renderEqCurve() {
+        const pathEl = document.getElementById("eq-curve-path");
+        const areaEl = document.getElementById("eq-curve-area");
+        const dotsEl = document.getElementById("eq-curve-dots");
+        if (!pathEl || !areaEl || !dotsEl) return;
+
+        const width = 1000;
+        const midY = 80;
+        const scaleY = 6.5; // 10 dB = 65px
+
+        const xs = currentBands.map((_, i) => 45 + (i * (width - 90)) / 9);
+        const ys = currentBands.map((b) => midY - b.gain_db * scaleY);
+
+        // Sample 120 points using Gaussian bell influence per band (width controlled by Q factor)
+        const samples = 120;
+        let dPath = "";
+        for (let s = 0; s <= samples; s++) {
+          const normX = s / samples; // 0..1 across log frequency axis
+          const px = 45 + normX * (width - 90);
+          let totalDb = 0;
+          currentBands.forEach((b, idx) => {
+            const centerNorm = idx / 9;
+            const q = Math.max(0.25, b.q_factor || 1.414);
+            const sigma = 0.095 / Math.sqrt(q);
+            const dist = normX - centerNorm;
+            totalDb += b.gain_db * Math.exp(-(dist * dist) / (2 * sigma * sigma));
+          });
+          totalDb = Math.max(-11.5, Math.min(11.5, totalDb));
+          const py = midY - totalDb * scaleY;
+          dPath += (s === 0 ? `M ${px.toFixed(1)} ${py.toFixed(1)}` : ` L ${px.toFixed(1)} ${py.toFixed(1)}`);
+        }
+
+        pathEl.setAttribute("d", dPath);
+        areaEl.setAttribute(
+          "d",
+          `${dPath} L ${(width - 45).toFixed(1)} ${midY} L 45 ${midY} Z`
+        );
+
+        dotsEl.innerHTML = xs
+          .map(
+            (x, i) =>
+              `<circle cx="${x.toFixed(1)}" cy="${ys[i].toFixed(1)}" r="4.5" fill="#ff5500" stroke="#0b0e14" stroke-width="2" />`
+          )
+          .join("");
+      }
+
+      function scheduleLiveEqApply() {
+        if (eqDebounceTimer) clearTimeout(eqDebounceTimer);
+        eqDebounceTimer = setTimeout(() => {
+          sendCurrentEq("custom", "Custom Live 10-band Parametric EQ", false);
+        }, 120);
+      }
+
+      async function sendCurrentEq(profileName, description, showNotification = true) {
+        const payload = {
+          name: profileName || "custom",
+          description: description || "Custom 10-band Parametric EQ profile",
+          gains_db: currentBands.map((b) => Number(b.gain_db.toFixed(2))),
+          q_factors: currentBands.map((b) => Number((b.q_factor || 1.414).toFixed(3))),
+          bands: currentBands,
+          save: true
+        };
+
+        try {
+          const res = await fetch("/api/eq", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+          });
+          const data = await res.json();
+          if (!res.ok || data.ok === false) {
+            throw new Error(data.error || `HTTP ${res.status}`);
+          }
+          activeProfileName = data.active_profile || payload.name;
+          updateActiveProfileBadges();
+          if (showNotification) {
+            showToast(`Applied 10-Band EQ (${activeProfileName}) to Headset DSP`);
+          }
+        } catch (err) {
+          if (showNotification) {
+            showToast(`EQ Apply Error: ${err.message}`, true);
+          }
+        }
+      }
+
+      async function activateNamedPreset(presetObj) {
+        // Optimistically load bands into UI immediately
+        if (Array.isArray(presetObj.gains_db) && presetObj.gains_db.length === 10) {
+          currentBands.forEach((b, i) => {
+            b.gain_db = Number(presetObj.gains_db[i]);
+            if (Array.isArray(presetObj.bands) && presetObj.bands[i]) {
+              b.q_factor = presetObj.bands[i].q_factor || 1.414;
+              b.filter_type = presetObj.bands[i].filter_type || "peaking";
+            } else {
+              b.q_factor = 1.414;
+              b.filter_type = "peaking";
+            }
+          });
+          updateEqUiFromState();
+        }
+
+        try {
+          // Send full preset definition so both built-in catalog and disk presets activate & persist cleanly
+          const res = await fetch("/api/presets", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              name: presetObj.name,
+              description: presetObj.description || presetObj.title || presetObj.name,
+              gains_db: currentBands.map((b) => b.gain_db),
+              q_factors: currentBands.map((b) => b.q_factor),
+              bands: currentBands,
+              save: true
+            })
+          });
+          const data = await res.json();
+          if (!res.ok || data.ok === false) {
+            throw new Error(data.error || `HTTP ${res.status}`);
+          }
+          activeProfileName = presetObj.name;
+          updateActiveProfileBadges();
+          renderPresetsGrid();
+          showToast(`Activated Preset: ${presetObj.title || presetObj.name}`);
+        } catch (err) {
+          showToast(`Failed to activate preset: ${err.message}`, true);
+        }
+      }
+
+      function getMergedPresets() {
+        const map = new Map();
+        BUILTIN_CATALOG.forEach((item) => map.set(item.name.toLowerCase(), { ...item }));
+        serverPresets.forEach((srv) => {
+          const key = (srv.name || "").toLowerCase();
+          if (!key) return;
+          if (map.has(key)) {
+            const existing = map.get(key);
+            map.set(key, {
+              ...existing,
+              gains_db: srv.gains_db || existing.gains_db,
+              bands: srv.bands || existing.bands
+            });
+          } else {
+            map.set(key, {
+              name: srv.name,
+              title: srv.name,
+              category: "custom",
+              tag: "User .toml",
+              description: srv.description || "Custom user profile in ~/.config/arctis-nova-7/profiles/",
+              gains_db: srv.gains_db || [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+              bands: srv.bands
+            });
+          }
+        });
+        return Array.from(map.values());
+      }
+
+      function renderPresetsGrid() {
+        const grid = document.getElementById("presets-grid");
+        if (!grid) return;
+        const all = getMergedPresets();
+        const filtered =
+          selectedCategory === "all"
+            ? all
+            : all.filter((p) => p.category === selectedCategory);
+
+        grid.innerHTML = "";
+        filtered.forEach((preset) => {
+          const isActive =
+            (activeProfileName || "").toLowerCase() === preset.name.toLowerCase();
+          const card = document.createElement("button");
+          card.type = "button";
+          card.className = "preset-card" + (isActive ? " active" : "");
+
+          const barsHtml = (preset.gains_db || [])
+            .map((g) => {
+              const normHeight = Math.max(3, Math.round(((g + 10) / 20) * 22));
+              return `<div class="preset-mini-bar" style="height:${normHeight}px"></div>`;
+            })
+            .join("");
+
+          card.innerHTML = `
+            <div>
+              <div class="preset-card-top">
+                <span class="preset-name">${preset.title || preset.name}</span>
+                <span class="preset-tag">${isActive ? "● ACTIVE" : preset.tag || "Preset"}</span>
+              </div>
+              <div class="preset-desc" style="margin-top:0.35rem;">${preset.description || ""}</div>
+            </div>
+            <div class="preset-mini-bars">${barsHtml}</div>
+          `;
+
+          card.addEventListener("click", () => activateNamedPreset(preset));
+          grid.appendChild(card);
+        });
+      }
+
+      function updateActiveProfileBadges() {
+        const badge = document.getElementById("active-eq-badge");
+        if (badge) {
+          badge.textContent = `Active: ${activeProfileName}`;
+        }
+      }
+
+      // Apply full status JSON from GET /api/status or SSE /api/events
+      function applyStatusSnapshot(st) {
+        if (!st || typeof st !== "object") return;
+
+        // USB Receiver Connection Badge
+        const usbBadge = document.getElementById("usb-badge");
+        const usbText = document.getElementById("usb-badge-text");
+        if (st.usb_connected) {
+          usbBadge.className = "badge ok";
+          usbText.textContent = `USB Connected (${st.product_id || "0x1038"})`;
+        } else {
+          usbBadge.className = "badge warn";
+          usbText.textContent = "USB Receiver Standby";
+        }
+
+        // Battery (0xB7)
+        const valBatt = document.getElementById("val-battery");
+        const valBattRaw = document.getElementById("val-battery-raw");
+        const battBar = document.getElementById("battery-bar");
+        if (typeof st.battery_percent === "number") {
+          valBatt.textContent = `${st.battery_percent}%`;
+          valBattRaw.textContent = st.battery_raw != null ? `(raw ${st.battery_raw})` : "";
+          battBar.style.width = `${ Math.max(0, Math.min(100, st.battery_percent)) }%`;
+          battBar.style.background =
+            st.battery_percent <= 20
+              ? "var(--red)"
+              : st.battery_percent <= 40
+              ? "var(--amber)"
+              : "linear-gradient(90deg, var(--green), #34d399)";
+        } else {
+          valBatt.textContent = "N/A";
+          valBattRaw.textContent = "(awaiting 0xB0/0xB7)";
+          battBar.style.width = "0%";
+        }
+
+        // Charging (0xBB)
+        const valCharging = document.getElementById("val-charging");
+        const chargingMap = {
+          charging: "⚡ Charging",
+          charged: "✓ Charged (Full)",
+          not_charging: "Discharging",
+          unknown: "Standby"
+        };
+        valCharging.textContent = chargingMap[st.charging_state] || st.charging_state || "Standby";
+        valCharging.style.color =
+          st.charging_state === "charging"
+            ? "var(--amber)"
+            : st.charging_state === "charged"
+            ? "var(--green)"
+            : "var(--text-main)";
+
+        // 2.4G Wireless (0xB9)
+        const valWireless = document.getElementById("val-wireless");
+        const valPid = document.getElementById("val-pid");
+        const wState = (st.wireless_state || "disconnected").toUpperCase();
+        valWireless.textContent = wState;
+        valWireless.style.color = st.wireless_connected ? "var(--green)" : "var(--text-muted)";
+        valPid.textContent = st.product_id ? `VID 0x1038 · PID ${st.product_id}` : "VID 0x1038";
+
+        // Mic Mute (0x52)
+        const valMic = document.getElementById("val-mic-mute");
+        if (st.mic_muted === true) {
+          valMic.textContent = "🔇 MUTED";
+          valMic.style.color = "var(--red)";
+        } else if (st.mic_muted === false) {
+          valMic.textContent = "🎙️ ACTIVE";
+          valMic.style.color = "var(--green)";
+        } else {
+          valMic.textContent = "Standby";
+          valMic.style.color = "var(--text-muted)";
+        }
+
+        // ChatMix (0x45)
+        if (st.chatmix) {
+          const game = typeof st.chatmix.game === "number" ? st.chatmix.game : 100;
+          const chat = typeof st.chatmix.chat === "number" ? st.chatmix.chat : 100;
+          document.getElementById("val-game-vol").textContent = `${game}%`;
+          document.getElementById("val-chat-vol").textContent = `${chat}%`;
+          document.getElementById("bar-game-vol").style.width = `${game}%`;
+          document.getElementById("bar-chat-vol").style.width = `${chat}%`;
+
+          // Compute needle angle (-125 deg full Game .. 0 deg Center .. +125 deg full Chat)
+          const diff = chat - game; // -100 .. +100
+          const angle = (diff / 100) * 125;
+          const needle = document.getElementById("chatmix-needle");
+          if (needle) {
+            needle.setAttribute("transform", `rotate(${angle.toFixed(1)} 60 60)`);
+          }
+
+          const biasBadge = document.getElementById("chatmix-bias-badge");
+          if (Math.abs(diff) <= 4) {
+            biasBadge.textContent = "Balanced (Center)";
+            biasBadge.className = "badge ok";
+          } else if (diff < 0) {
+            biasBadge.textContent = `Game Bias (+${Math.abs(diff)}%)`;
+            biasBadge.className = "badge warn";
+          } else {
+            biasBadge.textContent = `Chat Bias (+${diff}%)`;
+            biasBadge.className = "badge ok";
+          }
+        }
+
+        // Active EQ Profile
+        if (st.active_profile) {
+          activeProfileName = st.active_profile;
+          updateActiveProfileBadges();
+        }
+        if (st.eq && Array.isArray(st.eq.bands) && st.eq.bands.length === 10 && !isDraggingSlider) {
+          currentBands = st.eq.bands.map((b, i) => ({
+            frequency_hz: b.frequency_hz || EQ_FREQS[i],
+            gain_db: Number(b.gain_db || 0),
+            q_factor: Number(b.q_factor || 1.414),
+            filter_type: b.filter_type || "peaking"
+          }));
+          updateEqUiFromState();
+          renderPresetsGrid();
+        }
+
+        // Hardware Settings
+        if (st.settings) {
+          const s = st.settings;
+          const stLevel = s.sidetone_enabled ? (s.sidetone_level || 0) : 0;
+          document.querySelectorAll("#seg-sidetone .seg-btn").forEach((btn) => {
+            btn.classList.toggle("active", Number(btn.dataset.level) === stLevel);
+          });
+
+          const rngMic = document.getElementById("rng-mic-gain");
+          if (rngMic && document.activeElement !== rngMic && typeof s.mic_gain === "number") {
+            rngMic.value = String(s.mic_gain);
+            const pct = Math.round((s.mic_gain / 15) * 100);
+            document.getElementById("lbl-mic-gain").textContent = `${s.mic_gain} / 15 (${pct}%)`;
+          }
+
+          const chkLim = document.getElementById("chk-volume-limiter");
+          if (chkLim && typeof s.volume_limiter === "boolean") {
+            chkLim.checked = s.volume_limiter;
+            document.getElementById("lbl-volume-limiter").textContent = s.volume_limiter
+              ? "Enabled (EU dBA Cap)"
+              : "Disabled (Full Output)";
+          }
+
+          const rngInact = document.getElementById("rng-inactivity");
+          if (
+            rngInact &&
+            document.activeElement !== rngInact &&
+            typeof s.inactivity_timer_mins === "number"
+          ) {
+            rngInact.value = String(s.inactivity_timer_mins);
+            document.getElementById("lbl-inactivity").textContent =
+              s.inactivity_timer_mins === 0 ? "Never (0m)" : `${s.inactivity_timer_mins} min`;
+          }
+
+          if (typeof s.mute_led_brightness === "number") {
+            document.querySelectorAll("#seg-mute-led .seg-btn").forEach((btn) => {
+              btn.classList.toggle("active", Number(btn.dataset.led) === s.mute_led_brightness);
+            });
+          }
+
+          const chkBtPwr = document.getElementById("chk-bt-power");
+          if (chkBtPwr && typeof s.bt_power_on_default === "boolean") {
+            chkBtPwr.checked = s.bt_power_on_default;
+            document.getElementById("lbl-bt-power").textContent = s.bt_power_on_default
+              ? "Auto Power-On Enabled"
+              : "Disabled on Boot";
+          }
+
+          if (s.bt_call_behavior) {
+            document.querySelectorAll("#seg-bt-call .seg-btn").forEach((btn) => {
+              btn.classList.toggle("active", btn.dataset.call === s.bt_call_behavior);
+            });
+          }
+
+          if (typeof s.auto_apply_on_connect === "boolean") {
+            document.getElementById("chk-auto-apply").checked = s.auto_apply_on_connect;
+          }
+          if (typeof s.save_to_flash === "boolean") {
+            document.getElementById("chk-auto-flash").checked = s.save_to_flash;
+          }
+        }
+
+        if (st.last_updated_ms) {
+          const dt = new Date(st.last_updated_ms);
+          document.getElementById("last-updated-label").textContent =
+            `Updated ${dt.toLocaleTimeString()}`;
+        }
+      }
+
+      async function patchSettings(patchObj, label) {
+        try {
+          const res = await fetch("/api/settings", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(patchObj)
+          });
+          const data = await res.json();
+          if (!res.ok || data.ok === false) {
+            throw new Error(data.error || `HTTP ${res.status}`);
+          }
+          if (label) showToast(`Updated ${label}`);
+        } catch (err) {
+          showToast(`Settings Error: ${err.message}`, true);
+        }
+      }
+
+      async function triggerSaveFlash() {
+        try {
+          const res = await fetch("/api/save-flash", { method: "POST" });
+          const data = await res.json();
+          if (!res.ok || data.ok === false) {
+            throw new Error(data.error || `HTTP ${res.status}`);
+          }
+          showToast("⚡ Saved active EQ & Hardware Settings to Headset Flash (0x09)");
+        } catch (err) {
+          showToast(`Flash Save Error: ${err.message}`, true);
+        }
+      }
+
+      async function fetchInitialData() {
+        try {
+          const [statusRes, presetsRes] = await Promise.all([
+            fetch("/api/status"),
+            fetch("/api/presets")
+          ]);
+          if (presetsRes.ok) {
+            const pData = await presetsRes.json();
+            if (Array.isArray(pData.presets)) {
+              serverPresets = pData.presets;
+            }
+            if (pData.active_profile) {
+              activeProfileName = pData.active_profile;
+            }
+          }
+          if (statusRes.ok) {
+            const sData = await statusRes.json();
+            applyStatusSnapshot(sData);
+          }
+          renderPresetsGrid();
+        } catch (err) {
+          console.warn("Initial fetch warning:", err);
+        }
+      }
+
+      // Connect SSE (/api/events) with automatic reconnect
+      function connectSse() {
+        const sseBadge = document.getElementById("sse-badge");
+        const sseText = document.getElementById("sse-badge-text");
+        const es = new EventSource("/api/events");
+
+        es.onopen = () => {
+          sseBadge.className = "badge ok";
+          sseText.textContent = "Live SSE Connected";
+        };
+
+        const handleEvent = (evt) => {
+          try {
+            const parsed = JSON.parse(evt.data);
+            applyStatusSnapshot(parsed);
+          } catch (_) {}
+        };
+
+        [
+          "status",
+          "telemetry",
+          "chatmix",
+          "eq",
+          "sidetone",
+          "settings",
+          "flash_saved",
+          "message"
+        ].forEach((evtName) => es.addEventListener(evtName, handleEvent));
+
+        es.onerror = () => {
+          sseBadge.className = "badge err";
+          sseText.textContent = "SSE Reconnecting…";
+        };
+      }
+
+      // Wire UI Event Listeners
+      function bindControls() {
+        document.getElementById("btn-poll-status").addEventListener("click", async () => {
+          try {
+            const res = await fetch("/api/status?refresh=1");
+            if (res.ok) {
+              applyStatusSnapshot(await res.json());
+              showToast("Polled Headset Status (0xB0)");
+            }
+          } catch (e) {
+            showToast("Status poll failed", true);
+          }
+        });
+
+        document.getElementById("btn-save-flash-top").addEventListener("click", triggerSaveFlash);
+        document.getElementById("btn-eq-flash").addEventListener("click", triggerSaveFlash);
+        document.getElementById("btn-hw-save-flash").addEventListener("click", triggerSaveFlash);
+
+        document.getElementById("btn-eq-flat").addEventListener("click", () => {
+          currentBands.forEach((b) => {
+            b.gain_db = 0.0;
+            b.q_factor = 1.414;
+            b.filter_type = "peaking";
+          });
+          updateEqUiFromState();
+          sendCurrentEq("flat", "Flat reference response (all 10 bands at 0.0 dB)", true);
+        });
+
+        document.getElementById("btn-eq-apply").addEventListener("click", () => {
+          sendCurrentEq(activeProfileName || "custom", "Custom 10-band Parametric EQ", true);
+        });
+
+        // Preset category filter tabs
+        document.querySelectorAll("#preset-tabs .tab-btn").forEach((btn) => {
+          btn.addEventListener("click", () => {
+            document.querySelectorAll("#preset-tabs .tab-btn").forEach((b) => b.classList.remove("active"));
+            btn.classList.add("active");
+            selectedCategory = btn.dataset.cat || "all";
+            renderPresetsGrid();
+          });
+        });
+
+        // Save custom profile form
+        document.getElementById("form-save-profile").addEventListener("submit", async (e) => {
+          e.preventDefault();
+          const nameInp = document.getElementById("inp-profile-name");
+          const descInp = document.getElementById("inp-profile-desc");
+          const name = nameInp.value.trim();
+          if (!name) return;
+          const desc = descInp.value.trim() || `Custom user EQ profile (${name})`;
+          await sendCurrentEq(name, desc, true);
+          nameInp.value = "";
+          descInp.value = "";
+          const presetsRes = await fetch("/api/presets");
+          if (presetsRes.ok) {
+            const pData = await presetsRes.json();
+            if (Array.isArray(pData.presets)) serverPresets = pData.presets;
+            renderPresetsGrid();
+          }
+        });
+
+        // Sidetone segmented buttons (0x39)
+        document.querySelectorAll("#seg-sidetone .seg-btn").forEach((btn) => {
+          btn.addEventListener("click", async () => {
+            const level = Number(btn.dataset.level);
+            document.querySelectorAll("#seg-sidetone .seg-btn").forEach((b) =>
+              b.classList.toggle("active", b === btn)
+            );
+            await patchSettings(
+              { sidetone_enabled: level > 0, sidetone_level: level },
+              `Sidetone Level ${level} (0x39)`
+            );
+          });
+        });
+
+        // Mic Gain slider (0x37)
+        const rngMic = document.getElementById("rng-mic-gain");
+        rngMic.addEventListener("input", () => {
+          const val = Number(rngMic.value);
+          const pct = Math.round((val / 15) * 100);
+          document.getElementById("lbl-mic-gain").textContent = `${val} / 15 (${pct}%)`;
+        });
+        rngMic.addEventListener("change", () => {
+          patchSettings({ mic_gain: Number(rngMic.value) }, `Mic Gain ${rngMic.value}/15 (0x37)`);
+        });
+
+        // Volume Limiter (0x3A)
+        const chkLim = document.getElementById("chk-volume-limiter");
+        chkLim.addEventListener("change", () => {
+          document.getElementById("lbl-volume-limiter").textContent = chkLim.checked
+            ? "Enabled (EU dBA Cap)"
+            : "Disabled (Full Output)";
+          patchSettings({ volume_limiter: chkLim.checked }, "Volume Limiter (0x3A)");
+        });
+
+        // Inactivity Timer (0xA3)
+        const rngInact = document.getElementById("rng-inactivity");
+        rngInact.addEventListener("input", () => {
+          const v = Number(rngInact.value);
+          document.getElementById("lbl-inactivity").textContent =
+            v === 0 ? "Never (0m)" : `${v} min`;
+        });
+        rngInact.addEventListener("change", () => {
+          patchSettings(
+            { inactivity_timer_mins: Number(rngInact.value) },
+            `Inactivity Timer ${rngInact.value}m (0xA3)`
+          );
+        });
+
+        // Mute LED Brightness (0xAE)
+        document.querySelectorAll("#seg-mute-led .seg-btn").forEach((btn) => {
+          btn.addEventListener("click", () => {
+            const led = Number(btn.dataset.led);
+            document.querySelectorAll("#seg-mute-led .seg-btn").forEach((b) =>
+              b.classList.toggle("active", b === btn)
+            );
+            patchSettings({ mute_led_brightness: led }, `Mute LED Brightness ${led} (0xAE)`);
+          });
+        });
+
+        // Bluetooth Power-on Default (0xB2)
+        const chkBtPwr = document.getElementById("chk-bt-power");
+        chkBtPwr.addEventListener("change", () => {
+          document.getElementById("lbl-bt-power").textContent = chkBtPwr.checked
+            ? "Auto Power-On Enabled"
+            : "Disabled on Boot";
+          patchSettings({ bt_power_on_default: chkBtPwr.checked }, "Bluetooth Power Default (0xB2)");
+        });
+
+        // Bluetooth Call Behavior (0xB3)
+        document.querySelectorAll("#seg-bt-call .seg-btn").forEach((btn) => {
+          btn.addEventListener("click", () => {
+            const mode = btn.dataset.call;
+            document.querySelectorAll("#seg-bt-call .seg-btn").forEach((b) =>
+              b.classList.toggle("active", b === btn)
+            );
+            patchSettings({ bt_call_behavior: mode }, `Bluetooth Call Mode (${mode}, 0xB3)`);
+          });
+        });
+
+        // Daemon config flags
+        const chkAutoApply = document.getElementById("chk-auto-apply");
+        chkAutoApply.addEventListener("change", () => {
+          patchSettings({ auto_apply_on_connect: chkAutoApply.checked }, "Auto-Apply on Connect");
+        });
+        const chkAutoFlash = document.getElementById("chk-auto-flash");
+        chkAutoFlash.addEventListener("change", () => {
+          patchSettings({ save_to_flash: chkAutoFlash.checked }, "Auto-Flash Policy");
+        });
+      }
+
+      initEqSliders();
+      renderPresetsGrid();
+      bindControls();
+      fetchInitialData();
+      connectSse();
+    })();
+  </script>
+</body>
+</html>

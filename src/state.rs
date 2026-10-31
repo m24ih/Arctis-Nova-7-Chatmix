@@ -385,13 +385,11 @@ impl DeviceWorker {
                 reply,
             } => {
                 let res = (|| -> Result<()> {
-                    let report = profile.build_hid_report();
-                    send_report_serialized(&report, usb_handle)?;
-
                     if save_profile_to_disk {
-                        let _ = self.handle.config_manager.save_profile(&profile);
+                        self.handle.config_manager.save_profile(&profile)?;
                     }
 
+                    let report = profile.build_hid_report();
                     if let Ok(mut st) = self.handle.state.write() {
                         st.config.active_profile = profile.name.clone();
                         st.active_eq = profile;
@@ -399,6 +397,8 @@ impl DeviceWorker {
                         st.available_presets = load_all_presets(&self.handle.config_manager);
                         st.touch();
                     }
+
+                    send_report_serialized(&report, usb_handle)?;
                     Ok(())
                 })();
                 self.handle.broadcast_state("eq");
@@ -408,7 +408,6 @@ impl DeviceWorker {
                 let res = (|| -> Result<ParametricEqProfile> {
                     let profile = self.handle.config_manager.load_profile(&name)?;
                     let report = profile.build_hid_report();
-                    send_report_serialized(&report, usb_handle)?;
 
                     if let Ok(mut st) = self.handle.state.write() {
                         st.config.active_profile = profile.name.clone();
@@ -417,6 +416,8 @@ impl DeviceWorker {
                         st.available_presets = load_all_presets(&self.handle.config_manager);
                         st.touch();
                     }
+
+                    send_report_serialized(&report, usb_handle)?;
                     Ok(profile)
                 })();
                 self.handle.broadcast_state("eq");

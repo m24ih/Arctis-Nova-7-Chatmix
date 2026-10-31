@@ -452,11 +452,7 @@ impl ConfigManager {
         }
 
         // Seed built-in EQ presets into `profiles/*.toml` if not present
-        for preset in [
-            ParametricEqProfile::flat(),
-            ParametricEqProfile::harman(),
-            ParametricEqProfile::fps(),
-        ] {
+        for preset in ParametricEqProfile::builtin_presets() {
             let path = self.profile_file_path(&preset.name);
             if !path.exists() {
                 fs::write(&path, profile_to_toml_string(&preset)).with_context(|| {
@@ -526,9 +522,9 @@ impl ConfigManager {
                 }
             }
         }
-        for builtin in ["flat", "harman", "fps", "bass", "smiley"] {
-            if !names.iter().any(|n| n.eq_ignore_ascii_case(builtin)) {
-                names.push(builtin.to_string());
+        for preset in ParametricEqProfile::builtin_presets() {
+            if !names.iter().any(|n| n.eq_ignore_ascii_case(&preset.name)) {
+                names.push(preset.name);
             }
         }
         names.sort();

@@ -194,6 +194,51 @@ impl ParametricEqProfile {
         )
     }
 
+    /// Counter-Strike 2 (CS2) competitive preset emphasizing footsteps, defuse wires, and utility cues.
+    pub fn cs2() -> Self {
+        Self::from_gains(
+            "cs2",
+            "Counter-Strike 2 footsteps, defuse cues, and reduced HE/AWP low boom",
+            [-3.5, -2.0, -1.5, -2.0, 0.5, 2.0, 3.5, 4.5, 2.0, 0.5],
+        )
+    }
+
+    /// Valorant tactical preset emphasizing agent footsteps, spike cues, and ability audio.
+    pub fn valorant() -> Self {
+        Self::from_gains(
+            "valorant",
+            "Valorant agent footsteps, spike plant/defuse cues, and ability clarity",
+            [-2.5, -1.5, -1.0, -1.5, 0.5, 1.5, 3.0, 3.5, 1.5, 0.0],
+        )
+    }
+
+    /// Apex Legends battle-royale preset separating vertical footsteps, ziplines, and shield cracks.
+    pub fn apex() -> Self {
+        Self::from_gains(
+            "apex",
+            "Apex Legends vertical footsteps, shield cracks, and reduced ambient wind",
+            [-3.0, -2.0, -1.5, -2.0, 0.0, 1.5, 3.5, 4.0, 2.5, 1.0],
+        )
+    }
+
+    /// Call of Duty: Warzone preset cutting airstrike/vehicle sub-bass and boosting footsteps/crates.
+    pub fn warzone() -> Self {
+        Self::from_gains(
+            "warzone",
+            "Call of Duty: Warzone reduced airstrike sub-bass and boosted footstep/crate highs",
+            [-4.0, -2.5, -1.5, -2.0, -0.5, 1.5, 3.0, 4.5, 2.0, 0.5],
+        )
+    }
+
+    /// Baldur's Gate 3 & RPG Cinema preset with warm orchestral sub-bass and clear dialogue mids.
+    pub fn bg3() -> Self {
+        Self::from_gains(
+            "bg3",
+            "Baldur's Gate 3 & RPG Cinema warm orchestral bass, clear dialogue, and airy highs",
+            [2.5, 2.0, 0.5, -1.0, 0.5, 1.0, 1.5, 2.0, 1.5, 2.0],
+        )
+    }
+
     /// Warm Bass Boost preset.
     pub fn bass_boost() -> Self {
         Self::from_gains(
@@ -212,14 +257,28 @@ impl ParametricEqProfile {
         )
     }
 
-    #[allow(dead_code)]
+    /// Vocal & Podcast clarity preset.
+    pub fn vocal() -> Self {
+        Self::from_gains(
+            "vocal",
+            "Vocal & podcast speech clarity (rolls off rumble, boosts 500Hz-4kHz presence)",
+            [-3.0, -2.0, -1.0, 0.0, 1.5, 2.5, 3.0, 2.0, 0.5, -0.5],
+        )
+    }
+
     pub fn builtin_presets() -> Vec<Self> {
         vec![
             Self::flat(),
             Self::harman(),
             Self::fps(),
+            Self::cs2(),
+            Self::valorant(),
+            Self::apex(),
+            Self::warzone(),
+            Self::bg3(),
             Self::bass_boost(),
             Self::smiley(),
+            Self::vocal(),
         ]
     }
 
@@ -228,8 +287,14 @@ impl ParametricEqProfile {
             "flat" | "default" => Some(Self::flat()),
             "harman" | "music" | "audiophile" => Some(Self::harman()),
             "fps" | "footsteps" | "competitive" => Some(Self::fps()),
+            "cs2" | "counter-strike" | "csgo" => Some(Self::cs2()),
+            "valorant" | "val" => Some(Self::valorant()),
+            "apex" | "apex_legends" | "apex-legends" => Some(Self::apex()),
+            "warzone" | "cod" => Some(Self::warzone()),
+            "bg3" | "baldurs_gate_3" | "rpg" | "cinema" => Some(Self::bg3()),
             "bass" | "bass_boost" | "bass-boost" => Some(Self::bass_boost()),
             "smiley" | "v-shape" | "vshape" => Some(Self::smiley()),
+            "vocal" | "voice" | "podcast" => Some(Self::vocal()),
             _ => None,
         }
     }

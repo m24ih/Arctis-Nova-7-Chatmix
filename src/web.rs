@@ -756,28 +756,5 @@ fn write_error_response(stream: &mut TcpStream, status: u16, message: &str) -> R
     write_json_response(stream, status, &json)
 }
 
-const DEFAULT_INDEX_HTML: &str = r#"<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <title>Arctis Nova 7 DSP & Telemetry API</title>
-  <style>
-    body { background: #0f1117; color: #e2e8f0; font-family: system-ui, sans-serif; padding: 2rem; }
-    code { background: #1e2330; padding: 0.2rem 0.4rem; border-radius: 4px; color: #ff5500; }
-  </style>
-</head>
-<body>
-  <h1>Arctis Nova 7 Hardware DSP & Telemetry Server</h1>
-  <p>REST API & SSE endpoints active:</p>
-  <ul>
-    <li><code>GET /api/status</code> — Live telemetry, ChatMix, active EQ, and hardware state</li>
-    <li><code>GET / POST /api/eq</code> — 10-Band Parametric EQ (<code>0x33</code>)</li>
-    <li><code>GET / POST /api/presets</code> — Built-in & custom EQ profiles</li>
-    <li><code>GET / POST /api/settings</code> — Hardware settings (<code>0x37, 0x39, 0x3A, 0xA3, 0xAE, 0xB2, 0xB3</code>)</li>
-    <li><code>GET / POST /api/sidetone</code> — Sidetone control (<code>0x39</code>)</li>
-    <li><code>POST /api/save-flash</code> — Persist to onboard flash (<code>0x09</code>)</li>
-    <li><code>GET /api/events</code> — Real-time Server-Sent Events (SSE) stream</li>
-  </ul>
-</body>
-</html>
-"#;
+const DEFAULT_INDEX_HTML: &str = include_str!("../web/index.html");
+
