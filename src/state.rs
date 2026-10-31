@@ -547,7 +547,7 @@ impl DeviceWorker {
                             st.config.save_to_flash = save_flash;
                         }
                         if let Some(poll_secs) = patch.poll_status_interval_secs {
-                            st.config.poll_status_interval_secs = poll_secs;
+                            st.config.poll_status_interval_secs = poll_secs.max(2);
                         }
 
                         let _ = self.handle.config_manager.save_config(&st.config);

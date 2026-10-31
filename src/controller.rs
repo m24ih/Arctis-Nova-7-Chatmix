@@ -348,9 +348,16 @@ impl ArctisController {
         let mut last_status_poll = Instant::now();
 
         if let Ok(Some(event)) = crate::usb::hidapi_request_status() {
-            if telemetry.apply_event(&event) {
-                info!("Headset Telemetry: {}", telemetry.summary_line());
-                self.sync_telemetry_to_shared_state(&telemetry, "telemetry");
+            let changed = telemetry.apply_event(&event);
+            let event_name = match event {
+                TelemetryEvent::ChatMix { .. } => "chatmix",
+                _ => "telemetry",
+            };
+            if changed || matches!(event, TelemetryEvent::ChatMix { .. } | TelemetryEvent::GeneralStatus(_)) {
+                if changed {
+                    info!("Headset Telemetry: {}", telemetry.summary_line());
+                }
+                self.sync_telemetry_to_shared_state(&telemetry, event_name);
             }
         }
 
@@ -369,12 +376,21 @@ impl ArctisController {
                 && last_status_poll.elapsed() >= Duration::from_secs(current_poll_secs)
             {
                 if let Ok(Some(event)) = crate::usb::hidapi_request_status() {
-                    if telemetry.apply_event(&event) {
-                        info!("Headset Telemetry: {}", telemetry.summary_line());
-                        self.sync_telemetry_to_shared_state(&telemetry, "telemetry");
+                    let changed = telemetry.apply_event(&event);
+                    let event_name = match event {
+                        TelemetryEvent::ChatMix { .. } => "chatmix",
+                        _ => "telemetry",
+                    };
+                    if changed || matches!(event, TelemetryEvent::ChatMix { .. } | TelemetryEvent::GeneralStatus(_)) {
+                        if changed {
+                            info!("Headset Telemetry: {}", telemetry.summary_line());
+                        }
+                        self.sync_telemetry_to_shared_state(&telemetry, event_name);
                     }
                 } else {
                     let _ = rusb_request_status(handle, interface_num);
+                    // Broadcast heartbeat on explicit status poll
+                    self.sync_telemetry_to_shared_state(&telemetry, "telemetry");
                 }
                 last_status_poll = Instant::now();
             }
@@ -394,6 +410,9 @@ impl ArctisController {
                             let chat_ok = set_sink_volume(CHAT_SINK_NAME, chat_vol);
                             volume_state.record_chat(chat_vol, chat_ok);
                         }
+                        telemetry.game_volume = Some(game_vol);
+                        telemetry.chat_volume = Some(chat_vol);
+                        self.sync_telemetry_to_shared_state(&telemetry, "chatmix");
                     }
 
                     if let Some(event) = parse_telemetry_event(slice, is_percentage_device) {
@@ -413,17 +432,23 @@ impl ArctisController {
                             }
                         }
 
-                        if telemetry.apply_event(&event) {
-                            let event_name = match event {
-                                TelemetryEvent::ChatMix { .. } => {
-                                    debug!("Telemetry ChatMix: {}", telemetry.summary_line());
-                                    "chatmix"
+                        let changed = telemetry.apply_event(&event);
+                        let event_name = match event {
+                            TelemetryEvent::ChatMix { .. } => "chatmix",
+                            TelemetryEvent::GeneralStatus(_) => "telemetry",
+                            _ => "telemetry",
+                        };
+                        if changed || matches!(event, TelemetryEvent::ChatMix { .. } | TelemetryEvent::GeneralStatus(_)) {
+                            if changed {
+                                match event {
+                                    TelemetryEvent::ChatMix { .. } => {
+                                        debug!("Telemetry ChatMix: {}", telemetry.summary_line());
+                                    }
+                                    _ => {
+                                        info!("Headset Telemetry: {}", telemetry.summary_line());
+                                    }
                                 }
-                                _ => {
-                                    info!("Headset Telemetry: {}", telemetry.summary_line());
-                                    "telemetry"
-                                }
-                            };
+                            }
                             self.sync_telemetry_to_shared_state(&telemetry, event_name);
                         }
                     }

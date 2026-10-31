@@ -67,7 +67,7 @@ impl Default for AppConfig {
             active_profile: "harman".to_string(),
             auto_apply_on_connect: true,
             save_to_flash: false,
-            poll_status_interval_secs: 30,
+            poll_status_interval_secs: 2,
             web_enabled: true,
             web_bind: DEFAULT_WEB_BIND.to_string(),
             hardware: HardwareConfig::default(),
@@ -169,7 +169,7 @@ bt_call_behavior = "{bt_call}"
                 }
                 "poll_status_interval_secs" => {
                     if let Ok(n) = val.parse::<u64>() {
-                        cfg.poll_status_interval_secs = n;
+                        cfg.poll_status_interval_secs = n.max(2);
                     }
                 }
                 "web_enabled" => {

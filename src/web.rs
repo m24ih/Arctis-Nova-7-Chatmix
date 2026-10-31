@@ -587,7 +587,7 @@ fn parse_eq_profile_from_json(body: &str) -> Result<ParametricEqProfile> {
 }
 
 fn find_json_value_slice<'a>(json: &'a str, key: &str) -> Option<&'a str> {
-    let needle = format!("\"{}\"", key);
+    let needle = format!("\\\"{}\\\"", key);
     let mut in_string = false;
     let mut escaped = false;
     let mut i = 0;
