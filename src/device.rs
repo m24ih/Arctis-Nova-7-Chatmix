@@ -22,12 +22,21 @@ pub(crate) const SUPPORTED_PRODUCT_IDS: &[u16] = &[
     0x229c, // Arctis Nova 7X Gen 2 RX - brisket_xbox_rx (percentage battery: 0-100)
     0x229e, // Arctis Nova 7x v2 TX (percentage battery: 0-100)
     0x22A1, // Arctis Nova 7 Gen 2 Upgrade TX (percentage battery: 0-100, Jan 2026 update)
+    0x22a4, // Arctis Nova 7X (discrete battery: 0-4)
+    0x22a5, // Arctis Nova 7X (percentage battery: 0-100)
     0x22a9, // Arctis Nova 7 Diablo IV TX (percentage battery: 0-100, after Jan 2026 update)
+    0x22ad, // Arctis Nova 7X v2 (percentage battery: 0-100)
 ];
 
 /// Product IDs that report battery directly as a percentage (`0..=100`) instead of discrete steps (`0..=4`).
 pub(crate) const PERCENTAGE_BATTERY_PRODUCT_IDS: &[u16] = &[
-    0x2256, 0x2258, 0x227c, 0x227e, 0x2288, 0x228a, 0x229c, 0x229e, 0x22A1, 0x22a9,
+    0x2256, 0x2258, 0x227c, 0x227e, 0x2288, 0x228a, 0x229c, 0x229e, 0x22A1, 0x22a5, 0x22a9, 0x22ad,
+];
+
+/// Product IDs that report battery in discrete steps (`0..=4`).
+#[allow(dead_code)]
+pub(crate) const DISCRETE_BATTERY_PRODUCT_IDS: &[u16] = &[
+    0x2200, 0x2202, 0x2204, 0x2206, 0x2208, 0x220a, 0x2238, 0x223a, 0x2278, 0x227a, 0x22a4,
 ];
 
 pub(crate) const HID_MSG_SIZE: usize = 64;
@@ -133,6 +142,43 @@ pub(crate) fn is_supported_device(vendor_id: u16, product_id: u16) -> bool {
 /// Returns `true` if the given product ID natively reports battery in `0..=100%` rather than `0..=4`.
 pub(crate) fn is_percentage_battery_device(product_id: u16) -> bool {
     PERCENTAGE_BATTERY_PRODUCT_IDS.contains(&product_id)
+}
+
+/// Returns `true` if the given product ID natively reports battery in discrete steps `0..=4`.
+#[allow(dead_code)]
+pub(crate) fn is_discrete_battery_device(product_id: u16) -> bool {
+    DISCRETE_BATTERY_PRODUCT_IDS.contains(&product_id)
+}
+
+/// Returns the human-readable product name for a supported Arctis Nova 7 device.
+#[allow(dead_code)]
+pub fn device_name(product_id: u16) -> &'static str {
+    match product_id {
+        0x2200 => "Arctis Nova 7",
+        0x2202 => "Arctis Nova 7 TX",
+        0x2204 => "Arctis Nova 7X",
+        0x2206 => "Arctis Nova 7X TX",
+        0x2208 => "Arctis Nova 7P",
+        0x220a => "Arctis Nova 7P TX",
+        0x2238 => "Arctis Nova 7 Diablo IV",
+        0x223a => "Arctis Nova 7 Diablo IV TX",
+        0x2256 => "Arctis Nova 7X White",
+        0x2258 => "Arctis Nova 7X v2 TX",
+        0x2278 => "Arctis Nova 7 WoW Edition",
+        0x227a => "Arctis Nova 7 WoW Edition TX",
+        0x227c => "Arctis Nova 7 Gen 2",
+        0x227e => "Arctis Nova 7 Wireless Gen 2 TX",
+        0x2288 => "Arctis Nova 7P Gen 2",
+        0x228a => "Arctis Nova 7P Gen 2 TX",
+        0x229c => "Arctis Nova 7X Gen 2",
+        0x229e => "Arctis Nova 7X v2 TX",
+        0x22A1 => "Arctis Nova 7 Gen 2 Upgrade TX",
+        0x22a4 => "Arctis Nova 7X",
+        0x22a5 => "Arctis Nova 7X",
+        0x22a9 => "Arctis Nova 7 Diablo IV TX",
+        0x22ad => "Arctis Nova 7X v2",
+        _ => "Arctis Nova 7",
+    }
 }
 
 /// Maps a percentage (`0..=100`) to the 4-step hardware sidetone bucket (`0x00..=0x03`).
@@ -246,11 +292,46 @@ mod tests {
 
     #[test]
     fn test_is_supported_device() {
+        assert_eq!(SUPPORTED_PRODUCT_IDS.len(), 23);
         for &pid in SUPPORTED_PRODUCT_IDS {
             assert!(is_supported_device(VENDOR_ID, pid));
         }
         assert!(!is_supported_device(0x0000, 0x2202));
         assert!(!is_supported_device(VENDOR_ID, 0x9999));
+    }
+
+    #[test]
+    fn test_battery_format_partition() {
+        assert_eq!(PERCENTAGE_BATTERY_PRODUCT_IDS.len(), 12);
+        assert_eq!(DISCRETE_BATTERY_PRODUCT_IDS.len(), 11);
+        assert_eq!(
+            PERCENTAGE_BATTERY_PRODUCT_IDS.len() + DISCRETE_BATTERY_PRODUCT_IDS.len(),
+            SUPPORTED_PRODUCT_IDS.len()
+        );
+
+        for &pid in PERCENTAGE_BATTERY_PRODUCT_IDS {
+            assert!(is_percentage_battery_device(pid));
+            assert!(!is_discrete_battery_device(pid));
+        }
+
+        for &pid in DISCRETE_BATTERY_PRODUCT_IDS {
+            assert!(is_discrete_battery_device(pid));
+            assert!(!is_percentage_battery_device(pid));
+        }
+
+        // Specifically test the 3 newly added product IDs
+        assert!(is_discrete_battery_device(0x22a4));
+        assert!(is_percentage_battery_device(0x22a5));
+        assert!(is_percentage_battery_device(0x22ad));
+    }
+
+    #[test]
+    fn test_device_name() {
+        assert_eq!(device_name(0x22a4), "Arctis Nova 7X");
+        assert_eq!(device_name(0x22a5), "Arctis Nova 7X");
+        assert_eq!(device_name(0x22ad), "Arctis Nova 7X v2");
+        assert_eq!(device_name(0x2200), "Arctis Nova 7");
+        assert_eq!(device_name(0x9999), "Arctis Nova 7");
     }
 
     #[test]

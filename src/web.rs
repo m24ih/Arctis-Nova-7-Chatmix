@@ -223,7 +223,7 @@ fn handle_client(
             handle_post_sidetone(&mut stream, &worker, &body)
         }
         ("POST", "/api/chatmix") | ("PUT", "/api/chatmix") => handle_post_chatmix(&mut stream, &worker, &body),
-        ("POST", "/api/save-flash") => handle_post_save_flash(&mut stream, &worker),
+        ("POST", "/api/save-flash") | ("POST", "/api/flash-save") => handle_post_save_flash(&mut stream, &worker),
         ("GET", "/") | ("GET", "/index.html") => write_html_response(&mut stream, 200, DEFAULT_INDEX_HTML),
         _ => write_json_response(&mut stream, 404, r#"{"error":"Endpoint not found"}"#),
     }

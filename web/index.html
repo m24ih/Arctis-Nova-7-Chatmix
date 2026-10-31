@@ -1,2185 +1,1387 @@
 <!doctype html>
-<html lang="en" data-theme="dark">
+<html lang="tr" data-theme="dark">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Arctis Nova 7 — Hardware DSP Suite</title>
+<title>SteelSeries Arctis Nova 7 — Donanım Kontrol Paneli</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Google+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
 :root {
   color-scheme: dark;
-  --bg-base: #08090d;
-  --bg-surface: #0e1117;
-  --bg-surface-elevated: #131720;
-  --bg-card: #0e1117;
-  --bg-card-alt: #131720;
-  --bg-input: #0a0d13;
-  --border: rgba(255, 255, 255, 0.08);
-  --border-subtle: rgba(255, 255, 255, 0.05);
-  --border-highlight: rgba(255, 255, 255, 0.16);
-  --text-main: #f1f4f8;
-  --text-muted: #8e9bb0;
-  --text-dim: #556275;
-  --accent: #ff5500;
-  --accent-hover: #ff6f1f;
-  --accent-soft: rgba(255, 85, 0, 0.12);
-  --accent-glow: rgba(255, 85, 0, 0.28);
-  --cyan: #00d2ff;
-  --cyan-soft: rgba(0, 210, 255, 0.12);
-  --green: #10b981;
-  --green-soft: rgba(16, 185, 129, 0.12);
-  --red: #ef4444;
-  --amber: #f59e0b;
-  --radius-sm: 6px;
-  --radius: 12px;
-  --radius-lg: 16px;
-  --font-sans: "Inter", "Geist", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --font-mono: "JetBrains Mono", "SF Mono", ui-monospace, Menlo, monospace;
-  accent-color: var(--accent);
-  scrollbar-color: #1e2430 #08090d;
+
+  /* Material Design 3 (M3) Baseline Dark Color Tokens */
+  --md-sys-color-background: #141218;
+  --md-sys-color-surface: #141218;
+  --md-sys-color-surface-dim: #141218;
+  --md-sys-color-surface-bright: #3B383E;
+  --md-sys-color-surface-container-lowest: #0F0D13;
+  --md-sys-color-surface-container-low: #1D1B20;
+  --md-sys-color-surface-container: #211F26;
+  --md-sys-color-surface-container-high: #2B2930;
+  --md-sys-color-surface-container-highest: #36343B;
+
+  --md-sys-color-primary: #D0BCFF;
+  --md-sys-color-on-primary: #381E72;
+  --md-sys-color-primary-container: #4F378B;
+  --md-sys-color-on-primary-container: #EADDFF;
+
+  --md-sys-color-secondary: #CCC2DC;
+  --md-sys-color-on-secondary: #332D41;
+  --md-sys-color-secondary-container: #4A4458;
+  --md-sys-color-on-secondary-container: #E8DEF8;
+
+  --md-sys-color-tertiary: #EFB8C8;
+  --md-sys-color-on-tertiary: #492532;
+  --md-sys-color-tertiary-container: #633B48;
+  --md-sys-color-on-tertiary-container: #FFD8E4;
+
+  --md-sys-color-on-surface: #E6E0E9;
+  --md-sys-color-on-surface-variant: #CAC4D0;
+  --md-sys-color-outline: #938F99;
+  --md-sys-color-outline-variant: #49454F;
+
+  --md-sys-color-error: #F2B8B5;
+  --md-sys-color-on-error: #601410;
+  --md-sys-color-error-container: #8C1D18;
+  --md-sys-color-on-error-container: #F9DEDC;
+
+  /* Functional Status Colors */
+  --md-color-success: #A8E890;
+  --md-color-success-container: #1C3818;
+  --md-color-on-success-container: #C8FFB2;
+
+  --md-color-warning: #FFD56B;
+  --md-color-warning-container: #3C2E00;
+
+  /* Shapes */
+  --md-shape-corner-extra-large: 24px;
+  --md-shape-corner-large: 16px;
+  --md-shape-corner-medium: 12px;
+  --md-shape-corner-small: 8px;
+  --md-shape-corner-full: 9999px;
+
+  /* Typography */
+  --font-family: "Google Sans", "Roboto", "Inter", system-ui, -apple-system, sans-serif;
+  --font-mono: "JetBrains Mono", "Roboto Mono", ui-monospace, monospace;
 }
 
 *, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
-}
-
-html {
-  scroll-behavior: smooth;
-  font-size: 14px;
-}
-
-body {
-  background-color: var(--bg-base);
-  background-image: 
-    radial-gradient(ellipse 80% 40% at 50% -10%, rgba(255, 85, 0, 0.05), transparent 70%),
-    linear-gradient(to bottom, rgba(255, 255, 255, 0.015) 1px, transparent 1px),
-    linear-gradient(to right, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
-  background-size: 100% 100%, 32px 32px, 32px 32px;
-  color: var(--text-main);
-  font-family: var(--font-sans);
-  line-height: 1.5;
-  min-height: 100vh;
-  padding-bottom: 3.5rem;
-  overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
 }
 
-::selection {
-  background: rgba(255, 85, 0, 0.3);
-  color: #fff;
+body {
+  background-color: var(--md-sys-color-background);
+  color: var(--md-sys-color-on-surface);
+  font-family: var(--font-family);
+  font-size: 15px;
+  line-height: 1.5;
+  min-height: 100vh;
+  padding-bottom: 5rem;
 }
 
-/* Header & Top Bar */
-.topbar {
+/* Top App Bar */
+.top-app-bar {
   position: sticky;
   top: 0;
   z-index: 100;
-  background: rgba(8, 9, 13, 0.85);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border-bottom: 1px solid var(--border);
-  padding: 0.75rem 1.5rem;
+  background-color: rgba(20, 18, 24, 0.88);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--md-sys-color-outline-variant);
+  padding: 0.875rem 1.75rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
+  gap: 1.25rem;
   flex-wrap: wrap;
 }
 
-.brand {
+.brand-section {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.875rem;
 }
 
 .brand-icon {
-  width: 34px;
-  height: 34px;
-  border-radius: var(--radius-sm);
-  background: linear-gradient(135deg, #181d27 0%, #0d1017 100%);
-  border: 1px solid var(--border-highlight);
-  display: grid;
-  place-items: center;
-  color: var(--accent);
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.08);
-}
-
-.brand-title {
-  font-weight: 700;
-  font-size: 1.05rem;
-  letter-spacing: -0.025em;
-  color: #fff;
+  width: 42px;
+  height: 42px;
+  border-radius: var(--md-shape-corner-full);
+  background-color: var(--md-sys-color-primary-container);
+  color: var(--md-sys-color-on-primary-container);
   display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.brand-sub {
-  font-size: 0.72rem;
-  color: var(--text-muted);
-  font-family: var(--font-mono);
-  letter-spacing: 0.02em;
-}
-
-.badge-group {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-}
-
-/* Galaxy Badges & Live Radar */
-.badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.45rem;
-  padding: 0.3rem 0.65rem;
-  border-radius: 999px;
-  font-size: 0.72rem;
-  font-weight: 600;
-  border: 1px solid var(--border);
-  background: rgba(255, 255, 255, 0.02);
-  color: var(--text-muted);
-  font-family: var(--font-mono);
-  letter-spacing: 0.02em;
-  transition: all 0.2s ease;
-}
-
-.badge .dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--text-dim);
-  transition: all 0.25s ease;
-  position: relative;
-}
-
-.badge.ok {
-  color: var(--green);
-  background: var(--green-soft);
-  border-color: rgba(16, 185, 129, 0.25);
-}
-.badge.ok .dot {
-  background: var(--green);
-  box-shadow: 0 0 6px var(--green);
-}
-
-.badge.warn {
-  color: var(--amber);
-  background: rgba(245, 158, 11, 0.08);
-  border-color: rgba(245, 158, 11, 0.2);
-}
-.badge.warn .dot {
-  background: var(--amber);
-  box-shadow: 0 0 6px var(--amber);
-}
-
-.badge.live {
-  color: var(--cyan);
-  background: var(--cyan-soft);
-  border-color: rgba(0, 210, 255, 0.28);
-}
-.badge.live .dot {
-  background: var(--cyan);
-}
-.badge.live .dot::after {
-  content: "";
-  position: absolute;
-  inset: -3px;
-  border-radius: 50%;
-  border: 1px solid var(--cyan);
-  animation: radarPulse 1.8s cubic-bezier(0, 0.2, 0.8, 1) infinite;
-}
-
-@keyframes radarPulse {
-  0% { transform: scale(0.6); opacity: 1; }
-  100% { transform: scale(2.2); opacity: 0; }
-}
-
-/* Galaxy Button & Controls */
-.btn {
-  display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.45rem;
-  padding: 0.45rem 0.85rem;
-  border-radius: var(--radius-sm);
-  font-size: 0.8rem;
-  font-weight: 600;
-  border: 1px solid var(--border);
-  background: var(--bg-surface-elevated);
-  color: var(--text-main);
-  cursor: pointer;
-  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
-  font-family: inherit;
-  letter-spacing: 0.01em;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
-}
-
-.btn:hover {
-  background: #1a202c;
-  border-color: var(--border-highlight);
-  color: #fff;
-  transform: translateY(-1px);
-}
-
-.btn:active {
-  transform: translateY(0);
-}
-
-.btn:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}
-
-.btn-primary {
-  background: var(--accent);
-  border-color: rgba(255, 255, 255, 0.1);
-  color: #fff;
-  box-shadow: 0 2px 10px var(--accent-glow);
-}
-.btn-primary:hover {
-  background: var(--accent-hover);
-  border-color: transparent;
-  box-shadow: 0 4px 14px var(--accent-glow);
-}
-
-.btn-flash {
-  background: rgba(255, 85, 0, 0.08);
-  border-color: rgba(255, 85, 0, 0.3);
-  color: #ff7528;
-}
-.btn-flash:hover {
-  background: rgba(255, 85, 0, 0.16);
-  border-color: var(--accent);
-  color: #fff;
-}
-
-.btn svg {
   flex-shrink: 0;
 }
 
-/* Main Navigation (Anti-Slop Segmented Bar with SVG Icons) */
-.nav-pills {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
-  background: var(--bg-surface);
-  padding: 0.25rem;
-  border-radius: var(--radius);
-  border: 1px solid var(--border);
-}
-
-.nav-pills .tab-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 0.95rem;
-  border-radius: var(--radius-sm);
-  border: 1px solid transparent;
-  background: transparent;
-  color: var(--text-muted);
-  font-size: 0.8rem;
+.brand-title {
+  font-size: 1.25rem;
   font-weight: 600;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  font-family: inherit;
   letter-spacing: -0.01em;
+  color: var(--md-sys-color-on-surface);
 }
 
-.nav-pills .tab-btn:hover {
-  color: var(--text-main);
-  background: rgba(255, 255, 255, 0.03);
+.brand-subtitle {
+  font-size: 0.8125rem;
+  color: var(--md-sys-color-on-surface-variant);
 }
 
-.nav-pills .tab-btn.active {
-  background: var(--bg-surface-elevated);
-  border-color: var(--border-highlight);
-  color: #fff;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+.status-pills {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  flex-wrap: wrap;
 }
 
-.nav-pills .tab-btn.active svg {
-  color: var(--accent);
-}
-
-.nav-pills .kbd-hint {
-  font-family: var(--font-mono);
-  font-size: 0.65rem;
+.m3-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.375rem 0.875rem;
+  border-radius: var(--md-shape-corner-full);
+  font-size: 0.8125rem;
   font-weight: 500;
-  color: var(--text-dim);
-  background: rgba(255, 255, 255, 0.04);
-  padding: 0.1rem 0.35rem;
-  border-radius: 4px;
-  border: 1px solid var(--border-subtle);
+  background-color: var(--md-sys-color-surface-container-high);
+  color: var(--md-sys-color-on-surface);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  transition: all 0.2s ease;
 }
 
-.nav-pills .tab-btn.active .kbd-hint {
-  color: var(--text-muted);
-  border-color: rgba(255, 255, 255, 0.1);
+.m3-pill.connected {
+  background-color: var(--md-color-success-container);
+  color: var(--md-color-on-success-container);
+  border-color: transparent;
+}
+
+.m3-pill.warning {
+  background-color: var(--md-color-warning-container);
+  color: var(--md-color-warning);
+  border-color: transparent;
+}
+
+.m3-pill.primary {
+  background-color: var(--md-sys-color-primary-container);
+  color: var(--md-sys-color-on-primary-container);
+  border-color: transparent;
+}
+
+.dot-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: currentColor;
+}
+
+/* Primary Action Buttons */
+.m3-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1.25rem;
+  border-radius: var(--md-shape-corner-full);
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.2s ease, transform 0.1s ease, box-shadow 0.2s ease;
+  user-select: none;
+}
+
+.m3-btn:active {
+  transform: scale(0.98);
+}
+
+.m3-btn-primary {
+  background-color: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary);
+}
+
+.m3-btn-primary:hover {
+  background-color: #dfceff;
+}
+
+.m3-btn-tonal {
+  background-color: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
+}
+
+.m3-btn-tonal:hover {
+  background-color: #585168;
+}
+
+.m3-btn-outline {
+  background-color: transparent;
+  color: var(--md-sys-color-primary);
+  border: 1px solid var(--md-sys-color-outline);
+}
+
+.m3-btn-outline:hover {
+  background-color: rgba(208, 188, 255, 0.08);
 }
 
 /* Layout Container */
 .container {
-  max-width: 1240px;
-  margin: 1.5rem auto 0;
+  max-width: 920px;
+  margin: 1.75rem auto;
   padding: 0 1.25rem;
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
+  gap: 1.5rem;
 }
 
-/* Galaxy Cards */
-.card {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.04);
-  overflow: hidden;
+/* M3 Card Container */
+.m3-card {
+  background-color: var(--md-sys-color-surface-container);
+  border-radius: var(--md-shape-corner-extra-large);
+  padding: 1.75rem;
+  border: 1px solid var(--md-sys-color-outline-variant);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
 }
 
-.card-header {
-  padding: 0.85rem 1.25rem;
-  background: var(--bg-surface-elevated);
-  border-bottom: 1px solid var(--border);
+.m3-card-header {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
-  gap: 0.75rem;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
   flex-wrap: wrap;
 }
 
-.card-title {
-  font-size: 0.92rem;
-  font-weight: 700;
+.m3-card-title-group h2 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--md-sys-color-on-surface);
   display: flex;
   align-items: center;
-  gap: 0.55rem;
-  color: #fff;
-  letter-spacing: -0.015em;
-}
-
-.card-title svg {
-  color: var(--accent);
-}
-
-.opcode-tag {
-  font-family: var(--font-mono);
-  font-size: 0.68rem;
-  font-weight: 600;
-  padding: 0.15rem 0.45rem;
-  border-radius: 4px;
-  background: rgba(255, 255, 255, 0.04);
-  color: var(--text-muted);
-  border: 1px solid var(--border);
-  letter-spacing: 0.02em;
-}
-
-.card-body {
-  padding: 1.25rem;
-}
-
-.section {
-  display: none;
-  animation: fadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-}
-.section.active {
-  display: block;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(3px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-/* Galaxy Micro-Toggle Switch (Replaces Slop Checkboxes) */
-.galaxy-toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.55rem;
-  cursor: pointer;
-  user-select: none;
-  font-size: 0.8rem;
-  font-weight: 500;
-  color: var(--text-main);
-}
-
-.galaxy-toggle input[type="checkbox"] {
-  position: absolute;
-  opacity: 0;
-  width: 0;
-  height: 0;
-  pointer-events: none;
-}
-
-.toggle-track {
-  width: 36px;
-  height: 20px;
-  background: #171b24;
-  border: 1px solid var(--border-highlight);
-  border-radius: 999px;
-  position: relative;
-  transition: all 0.2s ease;
-  flex-shrink: 0;
-  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.4);
-}
-
-.toggle-thumb {
-  position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 14px;
-  height: 14px;
-  background: #8b98ad;
-  border-radius: 50%;
-  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
-}
-
-.galaxy-toggle input:checked + .toggle-track {
-  background: var(--accent-soft);
-  border-color: var(--accent);
-}
-
-.galaxy-toggle input:checked + .toggle-track .toggle-thumb {
-  transform: translateX(16px);
-  background: var(--accent);
-  box-shadow: 0 0 8px var(--accent);
-}
-
-.galaxy-toggle input:focus-visible + .toggle-track {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}
-
-/* Galaxy Segmented Radio Groups */
-.seg-group {
-  display: inline-flex;
-  align-items: center;
-  background: #090c12;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  padding: 3px;
-  gap: 2px;
-}
-
-.seg-btn {
-  padding: 0.35rem 0.75rem;
-  border: 1px solid transparent;
-  border-radius: 4px;
-  background: transparent;
-  color: var(--text-muted);
-  font-size: 0.76rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  font-family: inherit;
-  white-space: nowrap;
-}
-
-.seg-btn:hover {
-  color: var(--text-main);
-  background: rgba(255, 255, 255, 0.03);
-}
-
-.seg-btn.active {
-  background: var(--bg-surface-elevated);
-  border-color: var(--border-highlight);
-  color: #fff;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
-}
-
-/* EQ Curve Visualizer */
-.eq-curve-box {
-  background: #090c12;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 0.75rem;
-  margin-bottom: 1.25rem;
-  position: relative;
-  overflow: hidden;
-}
-
-.eq-curve-box::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background-image: 
-    linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
-  background-size: 40px 32px;
-  pointer-events: none;
-}
-
-.eq-svg {
-  width: 100%;
-  height: 150px;
-  display: block;
-}
-
-/* Galaxy Tactile EQ Faders */
-.eq-bands-grid {
-  display: grid;
-  grid-template-columns: repeat(10, 1fr);
   gap: 0.5rem;
 }
 
-.eq-band-strip {
-  background: #0a0d13;
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius);
-  padding: 0.85rem 0.45rem;
+.m3-card-title-group p {
+  font-size: 0.875rem;
+  color: var(--md-sys-color-on-surface-variant);
+  margin-top: 0.25rem;
+}
+
+/* ChatMix Crossfader */
+.chatmix-meters {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+@media (max-width: 600px) {
+  .chatmix-meters {
+    grid-template-columns: 1fr;
+  }
+}
+
+.channel-card {
+  background-color: var(--md-sys-color-surface-container-high);
+  border-radius: var(--md-shape-corner-large);
+  padding: 1rem 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.channel-name {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  font-size: 0.9375rem;
+}
+
+.channel-val {
+  font-family: var(--font-mono);
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--md-sys-color-primary);
+}
+
+.chatmix-slider-container {
+  padding: 0.75rem 0 1rem;
+}
+
+.chatmix-slider-track-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.chatmix-range {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 18px;
+  border-radius: var(--md-shape-corner-full);
+  background-color: var(--md-sys-color-surface-container-highest);
+  outline: none;
+  cursor: pointer;
+}
+
+.chatmix-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--md-shape-corner-full);
+  background-color: var(--md-sys-color-primary);
+  border: 4px solid var(--md-sys-color-surface-container);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+  cursor: grab;
+  transition: transform 0.1s ease;
+}
+
+.chatmix-range::-webkit-slider-thumb:active {
+  transform: scale(1.15);
+  cursor: grabbing;
+}
+
+.chatmix-range::-moz-range-thumb {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--md-shape-corner-full);
+  background-color: var(--md-sys-color-primary);
+  border: 4px solid var(--md-sys-color-surface-container);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+  cursor: grab;
+}
+
+.chatmix-scale {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 0.625rem;
+  font-size: 0.8125rem;
+  color: var(--md-sys-color-on-surface-variant);
+  font-weight: 500;
+}
+
+.chatmix-quick-chips {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 1.25rem;
+  flex-wrap: wrap;
+}
+
+/* EQ Canvas & Preset Chips */
+.preset-chips-scroll {
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+  padding-bottom: 0.75rem;
+  scrollbar-width: none;
+}
+.preset-chips-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.m3-filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 1rem;
+  border-radius: var(--md-shape-corner-small);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  background-color: var(--md-sys-color-surface-container-high);
+  color: var(--md-sys-color-on-surface-variant);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.m3-filter-chip:hover {
+  background-color: var(--md-sys-color-surface-container-highest);
+  color: var(--md-sys-color-on-surface);
+}
+
+.m3-filter-chip.active {
+  background-color: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
+  border-color: transparent;
+  font-weight: 600;
+}
+
+.eq-canvas-container {
+  background-color: var(--md-sys-color-surface-container-low);
+  border-radius: var(--md-shape-corner-large);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  padding: 1rem;
+  margin: 1.25rem 0 1.5rem;
+}
+
+#eqCanvas {
+  width: 100%;
+  height: 160px;
+  display: block;
+}
+
+/* Vertical Sliders Grid */
+.eq-sliders-grid {
+  display: grid;
+  grid-template-columns: repeat(10, 1fr);
+  gap: 0.5rem;
+  align-items: center;
+}
+
+@media (max-width: 680px) {
+  .eq-sliders-grid {
+    gap: 0.25rem;
+  }
+}
+
+.eq-column {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.65rem;
-  transition: border-color 0.15s ease;
+  gap: 0.5rem;
 }
 
-.eq-band-strip:hover {
-  border-color: var(--border-highlight);
-}
-
-.eq-gain-badge {
+.eq-gain-readout {
   font-family: var(--font-mono);
-  font-size: 0.72rem;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  padding: 0.18rem 0.45rem;
-  border-radius: 4px;
-  background: rgba(255, 255, 255, 0.03);
-  color: var(--text-muted);
-  border: 1px solid var(--border-subtle);
-  min-width: 52px;
-  text-align: center;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  padding: 0.2rem 0.4rem;
+  border-radius: var(--md-shape-corner-full);
+  background-color: var(--md-sys-color-surface-container-highest);
+  color: var(--md-sys-color-on-surface);
   cursor: pointer;
+  white-space: nowrap;
   transition: all 0.15s ease;
 }
 
-.eq-gain-badge:hover {
-  border-color: var(--border-highlight);
-  color: #fff;
+.eq-gain-readout:hover {
+  background-color: var(--md-sys-color-primary-container);
+  color: var(--md-sys-color-on-primary-container);
 }
 
-.eq-gain-badge.pos {
-  color: var(--accent);
-  background: var(--accent-soft);
-  border-color: rgba(255, 85, 0, 0.25);
+.eq-gain-readout.positive {
+  color: var(--md-sys-color-primary);
 }
 
-.eq-gain-badge.neg {
-  color: var(--cyan);
-  background: var(--cyan-soft);
-  border-color: rgba(0, 210, 255, 0.25);
+.eq-gain-readout.negative {
+  color: var(--md-sys-color-tertiary);
 }
 
 .eq-slider-holder {
   height: 170px;
-  width: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
-  position: relative;
+  width: 32px;
 }
 
-/* Custom Tactile Fader Track & Thumb */
 .eq-vslider {
-  writing-mode: vertical-lr;
-  direction: rtl;
-  width: 170px;
-  height: 28px;
-  transform: rotate(180deg);
   -webkit-appearance: none;
   appearance: none;
-  background: transparent;
+  width: 150px;
+  height: 8px;
+  border-radius: var(--md-shape-corner-full);
+  background: var(--md-sys-color-surface-container-highest);
+  outline: none;
+  transform: rotate(-90deg);
   cursor: pointer;
-}
-
-.eq-vslider::-webkit-slider-runnable-track {
-  width: 6px;
-  background: #171b24;
-  border-radius: 999px;
-  border: 1px solid var(--border);
-  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.6);
 }
 
 .eq-vslider::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
   width: 22px;
-  height: 14px;
-  border-radius: 4px;
-  background: linear-gradient(180deg, #2b3345 0%, #151a24 100%);
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.2);
-  margin-left: -8px;
-  transition: border-color 0.15s, box-shadow 0.15s;
-  position: relative;
+  height: 22px;
+  border-radius: var(--md-shape-corner-full);
+  background-color: var(--md-sys-color-primary);
+  border: 2px solid var(--md-sys-color-surface-container);
+  cursor: grab;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.4);
 }
 
-.eq-vslider:hover::-webkit-slider-thumb {
-  border-color: var(--accent);
-  box-shadow: 0 0 10px var(--accent-glow);
+.eq-vslider::-webkit-slider-thumb:active {
+  cursor: grabbing;
 }
 
-.eq-vslider:focus-visible::-webkit-slider-thumb {
-  outline: 2px solid var(--accent);
+.eq-vslider::-moz-range-thumb {
+  width: 22px;
+  height: 22px;
+  border-radius: var(--md-shape-corner-full);
+  background-color: var(--md-sys-color-primary);
+  border: 2px solid var(--md-sys-color-surface-container);
+  cursor: grab;
 }
 
 .eq-freq-label {
-  font-family: var(--font-mono);
-  font-weight: 700;
   font-size: 0.75rem;
-  color: var(--text-main);
-  letter-spacing: -0.01em;
+  font-weight: 600;
+  color: var(--md-sys-color-on-surface-variant);
+  white-space: nowrap;
 }
 
-.eq-raw-byte {
-  font-family: var(--font-mono);
-  font-size: 0.65rem;
-  color: var(--text-dim);
-  font-variant-numeric: tabular-nums;
-}
-
-.eq-sub-control {
-  width: 100%;
+/* Hardware Controls List */
+.hw-controls-list {
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
-  padding-top: 0.35rem;
-  border-top: 1px solid var(--border-subtle);
+  gap: 1rem;
 }
 
-.eq-q-input, .eq-filter-select {
-  width: 100%;
-  background: #080a0f;
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  color: var(--text-muted);
-  font-family: var(--font-mono);
-  font-size: 0.68rem;
-  padding: 0.2rem 0.3rem;
-  text-align: center;
-}
-
-.eq-q-input:focus, .eq-filter-select:focus {
-  outline: none;
-  border-color: var(--accent);
-  color: #fff;
-}
-
-/* ChatMix Section & Endustrial Crossfader */
-.chatmix-layout {
-  display: grid;
-  grid-template-columns: 260px 1fr;
-  gap: 2rem;
+.hw-row {
+  background-color: var(--md-sys-color-surface-container-high);
+  border-radius: var(--md-shape-corner-large);
+  padding: 1.125rem 1.375rem;
+  display: flex;
   align-items: center;
-}
-
-.dial-wrap {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 1.5rem;
-  background: #090c12;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-}
-
-.chatmix-channels {
-  display: flex;
-  flex-direction: column;
+  justify-content: space-between;
   gap: 1.25rem;
+  flex-wrap: wrap;
 }
 
-.channel-row {
-  background: #090c12;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 1rem 1.25rem;
+.hw-info {
+  flex: 1;
+  min-width: 220px;
 }
 
-.channel-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 0.5rem;
+.hw-label {
+  font-size: 0.9375rem;
   font-weight: 600;
-  font-size: 0.86rem;
-}
-
-.channel-header-title {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.channel-pct {
-  font-family: var(--font-mono);
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  font-size: 0.95rem;
-}
-
-.meter-track {
-  height: 10px;
-  background: #141822;
-  border-radius: 999px;
-  overflow: hidden;
-  border: 1px solid var(--border-subtle);
-}
-
-.meter-bar {
-  height: 100%;
-  width: 100%;
-  border-radius: 999px;
-  transition: width 0.15s ease-out;
-}
-
-.meter-bar.game {
-  background: linear-gradient(90deg, #ff5500, #ff7a29);
-  box-shadow: 0 0 10px var(--accent-glow);
-}
-
-.meter-bar.chat {
-  background: linear-gradient(90deg, #00b4d8, #00d2ff);
-  box-shadow: 0 0 10px var(--cyan-soft);
-}
-
-.fader-box {
-  background: #090c12;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 1rem 1.25rem;
-}
-
-.fader-labels {
-  display: flex;
-  justify-content: space-between;
-  font-family: var(--font-mono);
-  font-size: 0.72rem;
-  color: var(--text-muted);
-  margin-bottom: 0.65rem;
-  font-weight: 600;
-}
-
-.crossfader {
-  width: 100%;
-  -webkit-appearance: none;
-  appearance: none;
-  height: 8px;
-  background: #141822;
-  border-radius: 999px;
-  border: 1px solid var(--border);
-  outline: none;
-}
-
-.crossfader::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 28px;
-  height: 20px;
-  border-radius: 4px;
-  background: linear-gradient(180deg, #2c3444 0%, #161b24 100%);
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
-  cursor: pointer;
-  transition: border-color 0.15s;
-}
-
-.crossfader:hover::-webkit-slider-thumb {
-  border-color: var(--accent);
-}
-
-/* Headset Settings Grid */
-.hw-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 1rem;
-}
-
-.hw-item {
-  background: #090c12;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 1.15rem;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  gap: 1rem;
-}
-
-.hw-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 0.5rem;
-}
-
-.hw-title {
-  font-weight: 600;
-  font-size: 0.88rem;
-  color: #fff;
-  letter-spacing: -0.01em;
+  color: var(--md-sys-color-on-surface);
 }
 
 .hw-desc {
-  font-size: 0.74rem;
-  color: var(--text-muted);
-  margin-top: 0.2rem;
+  font-size: 0.8125rem;
+  color: var(--md-sys-color-on-surface-variant);
+  margin-top: 0.15rem;
 }
 
-.hw-slider {
-  width: 100%;
-  height: 6px;
-  border-radius: 999px;
-  background: #141822;
-  border: 1px solid var(--border);
-  outline: none;
-  -webkit-appearance: none;
-}
-
-.hw-slider::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: var(--text-main);
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  cursor: pointer;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
-}
-
-.hw-slider:hover::-webkit-slider-thumb {
-  background: var(--accent);
-}
-
-/* Presets Section */
-.presets-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
-  gap: 0.85rem;
-  margin-bottom: 1.25rem;
-}
-
-.preset-card {
-  background: #090c12;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 1rem;
-  text-align: left;
-  cursor: pointer;
-  transition: all 0.15s ease;
+.hw-action {
   display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  min-height: 120px;
-}
-
-.preset-card:hover {
-  border-color: var(--border-highlight);
-  background: #0d1118;
-  transform: translateY(-1px);
-}
-
-.preset-card.active {
-  border-color: var(--accent);
-  background: rgba(255, 85, 0, 0.05);
-  box-shadow: 0 0 16px rgba(255, 85, 0, 0.15);
-}
-
-.preset-card-top {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 0.35rem;
-}
-
-.preset-name {
-  font-weight: 700;
-  font-size: 0.88rem;
-  color: #fff;
-  letter-spacing: -0.015em;
-}
-
-.preset-tag {
-  font-family: var(--font-mono);
-  font-size: 0.64rem;
-  font-weight: 600;
-  padding: 0.15rem 0.4rem;
-  border-radius: 4px;
-  background: rgba(255, 255, 255, 0.05);
-  color: var(--text-muted);
-}
-
-.preset-card.active .preset-tag {
-  background: var(--accent);
-  color: #fff;
-}
-
-.preset-desc {
-  font-size: 0.74rem;
-  color: var(--text-muted);
-  line-height: 1.4;
-  margin-bottom: 0.75rem;
-}
-
-.preset-mini-bars {
-  display: flex;
-  align-items: flex-end;
-  gap: 3px;
-  height: 22px;
-  padding: 2px;
-  background: #06070a;
-  border-radius: 4px;
-}
-
-.preset-mini-bar {
-  flex: 1;
-  background: var(--text-dim);
-  border-radius: 1px;
-  min-height: 3px;
-}
-
-.preset-card.active .preset-mini-bar {
-  background: var(--accent);
-}
-
-.save-profile-bar {
-  display: flex;
-  gap: 0.5rem;
-  flex-wrap: wrap;
   align-items: center;
-  background: #090c12;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 0.75rem 1rem;
+  gap: 0.75rem;
 }
 
-.input-text {
-  background: #05070a;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  padding: 0.45rem 0.75rem;
-  color: #fff;
+/* M3 Segmented Buttons */
+.m3-segmented-btn-group {
+  display: inline-flex;
+  border: 1px solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-shape-corner-full);
+  overflow: hidden;
+  background-color: var(--md-sys-color-surface-container);
+}
+
+.m3-seg-btn {
+  background: transparent;
+  border: none;
+  border-right: 1px solid var(--md-sys-color-outline-variant);
+  padding: 0.45rem 0.95rem;
+  color: var(--md-sys-color-on-surface-variant);
   font-family: inherit;
-  font-size: 0.8rem;
-}
-
-.input-text:focus {
-  outline: none;
-  border-color: var(--accent);
-}
-
-/* Diagnostics & Telemetry */
-.telemetry-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
-  gap: 1rem;
-  margin-bottom: 1.25rem;
-}
-
-.stat-tile {
-  background: #090c12;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 1rem 1.15rem;
-}
-
-.stat-label {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  font-size: 0.74rem;
-  color: var(--text-muted);
+  gap: 0.35rem;
+}
+
+.m3-seg-btn:last-child {
+  border-right: none;
+}
+
+.m3-seg-btn:hover {
+  background-color: var(--md-sys-color-surface-container-highest);
+  color: var(--md-sys-color-on-surface);
+}
+
+.m3-seg-btn.active {
+  background-color: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
   font-weight: 600;
-  margin-bottom: 0.4rem;
 }
 
-.stat-value {
-  font-family: var(--font-mono);
-  font-size: 1.4rem;
-  font-weight: 700;
-  color: #fff;
-  letter-spacing: -0.02em;
-  font-variant-numeric: tabular-nums;
+/* M3 Switch Component */
+.m3-switch {
+  position: relative;
+  display: inline-block;
+  width: 52px;
+  height: 32px;
+  flex-shrink: 0;
 }
 
-.stat-sub {
-  font-size: 0.7rem;
-  color: var(--text-dim);
-  font-family: var(--font-mono);
-  margin-top: 0.25rem;
+.m3-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
 }
 
-.battery-bar-wrap {
-  height: 5px;
-  background: #141822;
-  border-radius: 999px;
-  margin-top: 0.55rem;
+.m3-switch-track {
+  position: absolute;
+  cursor: pointer;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-color: var(--md-sys-color-surface-container-highest);
+  border: 2px solid var(--md-sys-color-outline);
+  border-radius: var(--md-shape-corner-full);
+  transition: background-color 0.2s, border-color 0.2s;
+}
+
+.m3-switch-thumb {
+  position: absolute;
+  content: "";
+  height: 16px;
+  width: 16px;
+  left: 6px;
+  bottom: 6px;
+  background-color: var(--md-sys-color-outline);
+  border-radius: 50%;
+  transition: transform 0.2s cubic-bezier(0.2, 0, 0, 1), background-color 0.2s, width 0.2s, height 0.2s, left 0.2s, bottom 0.2s;
+}
+
+.m3-switch input:checked + .m3-switch-track {
+  background-color: var(--md-sys-color-primary);
+  border-color: var(--md-sys-color-primary);
+}
+
+.m3-switch input:checked + .m3-switch-track .m3-switch-thumb {
+  transform: translateX(20px);
+  background-color: var(--md-sys-color-on-primary);
+  width: 24px;
+  height: 24px;
+  left: 2px;
+  bottom: 2px;
+}
+
+/* M3 Horizontal Slider */
+.m3-horizontal-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 140px;
+  height: 12px;
+  border-radius: var(--md-shape-corner-full);
+  background-color: var(--md-sys-color-surface-container-highest);
+  outline: none;
+  cursor: pointer;
+}
+
+.m3-horizontal-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 22px;
+  height: 22px;
+  border-radius: var(--md-shape-corner-full);
+  background-color: var(--md-sys-color-primary);
+  border: 3px solid var(--md-sys-color-surface-container);
+  cursor: grab;
+}
+
+.m3-horizontal-slider::-moz-range-thumb {
+  width: 22px;
+  height: 22px;
+  border-radius: var(--md-shape-corner-full);
+  background-color: var(--md-sys-color-primary);
+  border: 3px solid var(--md-sys-color-surface-container);
+  cursor: grab;
+}
+
+/* Collapsible Diagnostics Section */
+details.m3-details {
+  background-color: var(--md-sys-color-surface-container-low);
+  border-radius: var(--md-shape-corner-extra-large);
+  border: 1px solid var(--md-sys-color-outline-variant);
   overflow: hidden;
 }
 
-.battery-bar-fill {
-  height: 100%;
-  border-radius: 999px;
-  background: var(--green);
-  transition: width 0.3s ease;
+details.m3-details summary {
+  padding: 1.125rem 1.75rem;
+  font-weight: 600;
+  font-size: 0.9375rem;
+  color: var(--md-sys-color-on-surface-variant);
+  cursor: pointer;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
-.raw-json {
-  background: #05070a;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
+details.m3-details summary:hover {
+  background-color: var(--md-sys-color-surface-container);
+  color: var(--md-sys-color-on-surface);
+}
+
+.diag-body {
+  padding: 1.25rem 1.75rem 1.75rem;
+  border-top: 1px solid var(--md-sys-color-outline-variant);
+}
+
+.diag-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.diag-card {
+  background-color: var(--md-sys-color-surface-container);
+  border-radius: var(--md-shape-corner-large);
+  padding: 1rem;
+}
+
+.diag-label {
+  font-size: 0.75rem;
+  color: var(--md-sys-color-on-surface-variant);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.diag-val {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--md-sys-color-on-surface);
+  margin-top: 0.25rem;
+}
+
+pre.diag-json {
+  background-color: var(--md-sys-color-surface-container-lowest);
+  border-radius: var(--md-shape-corner-medium);
   padding: 1rem;
   font-family: var(--font-mono);
-  font-size: 0.74rem;
-  color: #8b9bb4;
-  max-height: 300px;
-  overflow: auto;
-  white-space: pre-wrap;
-  line-height: 1.5;
+  font-size: 0.75rem;
+  color: var(--md-sys-color-secondary);
+  overflow-x: auto;
+  max-height: 220px;
 }
 
-/* Toast Notification */
-#toast-container {
+/* Floating Snackbar */
+#snackbar {
   position: fixed;
-  bottom: 1.5rem;
-  right: 1.5rem;
-  z-index: 1000;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(100px);
+  background-color: var(--md-sys-color-surface-container-highest);
+  color: var(--md-sys-color-on-surface);
+  padding: 0.75rem 1.5rem;
+  border-radius: var(--md-shape-corner-full);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
+  border: 1px solid var(--md-sys-color-outline-variant);
+  font-size: 0.875rem;
+  font-weight: 500;
   display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
+  align-items: center;
+  gap: 0.625rem;
+  z-index: 999;
+  opacity: 0;
+  transition: transform 0.25s cubic-bezier(0.2, 0, 0, 1), opacity 0.25s ease;
   pointer-events: none;
 }
 
-.toast {
-  background: #141822;
-  border: 1px solid var(--border-highlight);
-  border-left: 3px solid var(--accent);
-  color: #fff;
-  padding: 0.65rem 1rem;
-  border-radius: var(--radius-sm);
-  font-size: 0.8rem;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
-  pointer-events: auto;
-  animation: slideUp 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-  font-family: var(--font-mono);
-}
-
-.toast.err {
-  border-left-color: var(--red);
-}
-
-@keyframes slideUp {
-  from { transform: translateY(10px); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
+#snackbar.show {
+  transform: translateX(-50%) translateY(0);
+  opacity: 1;
 }
 
 /* Footer */
-.site-footer {
+.m3-footer {
   text-align: center;
-  color: var(--text-dim);
-  font-size: 0.74rem;
-  margin-top: 2.5rem;
-  padding: 1rem;
-  font-family: var(--font-mono);
-  letter-spacing: 0.02em;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 1rem;
-  flex-wrap: wrap;
-}
-
-.site-footer a {
-  color: var(--text-muted);
-  text-decoration: none;
-  transition: color 0.15s;
-}
-
-.site-footer a:hover {
-  color: #fff;
-}
-
-/* Responsive */
-@media (max-width: 960px) {
-  .eq-bands-grid {
-    grid-template-columns: repeat(5, 1fr);
-  }
-  .chatmix-layout {
-    grid-template-columns: 1fr;
-  }
-  .dial-wrap {
-    order: -1;
-  }
-}
-
-@media (max-width: 640px) {
-  .topbar {
-    padding: 0.75rem 1rem;
-  }
-  .eq-bands-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-  .nav-pills {
-    width: 100%;
-    justify-content: flex-start;
-    overflow-x: auto;
-  }
+  font-size: 0.8125rem;
+  color: var(--md-sys-color-on-surface-variant);
+  padding: 1.5rem 0 0.5rem;
 }
 </style>
 </head>
 <body>
 
-<header class="topbar">
-  <div class="brand">
-    <div class="brand-icon" title="SteelSeries Arctis Nova 7">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+<!-- Top App Bar -->
+<header class="top-app-bar">
+  <div class="brand-section">
+    <div class="brand-icon">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M3 18v-6a9 9 0 0 1 18 0v6"/>
         <path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/>
       </svg>
     </div>
     <div>
-      <div class="brand-title">Arctis Nova 7 <span style="font-weight:400;color:var(--text-muted);font-size:0.86rem;">DSP Suite</span></div>
-      <div class="brand-sub">USB HID · PIPEWIRE CHATMIX · HARDWARE EQ</div>
+      <div class="brand-title">SteelSeries Arctis Nova 7</div>
+      <div class="brand-subtitle" id="device-subtitle">Linux ChatMix & Parametrik DSP Denetleyici</div>
     </div>
   </div>
 
-  <div class="badge-group">
-    <span class="badge" id="usb-badge"><span class="dot"></span><span id="usb-badge-text">USB Standby</span></span>
-    <span class="badge" id="sse-badge"><span class="dot"></span><span id="sse-badge-text">SSE Init</span></span>
-    <span class="badge" id="sync-badge"><span class="dot"></span><span id="sync-badge-text">SYNC: 2s</span></span>
-    <span class="badge" id="header-chatmix-badge"><span class="dot"></span><span id="header-chatmix-text">Balance: 100% ╎ 100%</span></span>
-    <button type="button" class="btn btn-flash" id="btn-save-flash-top" onclick="triggerSaveFlash()" title="Save all hardware settings to permanent EEPROM (Opcode 0x09)">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <div class="status-pills">
+    <div class="m3-pill" id="pill-wireless">
+      <span class="dot-indicator"></span>
+      <span id="txt-wireless">2.4GHz RF Beklemede</span>
+    </div>
+
+    <div class="m3-pill" id="pill-battery">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="2" y="7" width="16" height="10" rx="2" ry="2"/>
+        <line x1="22" y1="11" x2="22" y2="13"/>
+      </svg>
+      <span id="txt-battery">Pil: --%</span>
+    </div>
+
+    <div class="m3-pill primary" id="pill-sse">
+      <span class="dot-indicator"></span>
+      <span id="txt-sse">Canlı SSE</span>
+    </div>
+
+    <button type="button" class="m3-btn m3-btn-tonal" style="padding:0.45rem 1rem;" onclick="triggerSaveFlash()" title="Donanım hafızasına kaydet (0x09)">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
       </svg>
-      <span>Save Flash</span>
+      <span>Kulaklığa Kaydet</span>
     </button>
   </div>
 </header>
 
 <main class="container">
-  <!-- Segmented Navigation (No Emojis, Pure SVG + Keyboard Shortcuts) -->
-  <div style="display:flex;justify-content:center;">
-    <nav class="nav-pills" aria-label="Main sections">
-      <button class="tab-btn active" onclick="showSection('eq')" aria-selected="true" id="tab-btn-eq">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/>
-        </svg>
-        <span>Equalizer</span>
-        <span class="kbd-hint">1</span>
-      </button>
-      <button class="tab-btn" onclick="showSection('chatmix')" aria-selected="false" id="tab-btn-chatmix">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/>
-        </svg>
-        <span>ChatMix & Audio</span>
-        <span class="kbd-hint">2</span>
-      </button>
-      <button class="tab-btn" onclick="showSection('settings')" aria-selected="false" id="tab-btn-settings">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/>
-        </svg>
-        <span>Headset</span>
-        <span class="kbd-hint">3</span>
-      </button>
-      <button class="tab-btn" onclick="showSection('presets')" aria-selected="false" id="tab-btn-presets">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
-        </svg>
-        <span>Presets</span>
-        <span class="kbd-hint">4</span>
-      </button>
-      <button class="tab-btn" onclick="showSection('diag')" aria-selected="false" id="tab-btn-diag">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
-        </svg>
-        <span>Diagnostics</span>
-        <span class="kbd-hint">5</span>
-      </button>
-    </nav>
-  </div>
 
-  <!-- Section 1: Equalizer -->
-  <section id="sec-eq" class="section active">
-    <div class="card">
-      <div class="card-header">
-        <div class="card-title">
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/>
-          </svg>
-          <span>10-Band Hardware Parametric EQ</span>
-          <span class="opcode-tag">USB 0x33 · GAIA 0x0933</span>
-          <span class="badge ok" id="active-eq-badge">Active: harman</span>
-        </div>
-        <div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;">
-          <label class="galaxy-toggle" title="Send 0x33 HID report while dragging">
-            <input type="checkbox" id="chk-live-eq" checked />
-            <span class="toggle-track"><span class="toggle-thumb"></span></span>
-            <span>Live Apply</span>
-          </label>
-          <button type="button" class="btn" onclick="resetEqFlat()" title="Reset all 10 bands to 0 dB (Shortcut: R)">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/>
-            </svg>
-            <span>Reset 0 dB</span>
-          </button>
-          <button type="button" class="btn btn-primary" onclick="applyEqNow()">Apply EQ</button>
-          <button type="button" class="btn btn-flash" onclick="triggerSaveFlash()">Save Flash</button>
-        </div>
-      </div>
-      <div class="card-body">
-        <div class="eq-curve-box">
-          <svg class="eq-svg" id="eq-curve-svg" viewBox="0 0 1000 160" preserveAspectRatio="none">
-            <defs>
-              <linearGradient id="curveGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                <stop offset="0%" stop-color="#ff5500" stop-opacity="0.25"/>
-                <stop offset="100%" stop-color="#ff5500" stop-opacity="0.0"/>
-              </linearGradient>
-            </defs>
-            <line x1="0" y1="15" x2="1000" y2="15" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
-            <line x1="0" y1="47.5" x2="1000" y2="47.5" stroke="rgba(255,255,255,0.04)" stroke-width="1" stroke-dasharray="4 4"/>
-            <line x1="0" y1="80" x2="1000" y2="80" stroke="rgba(255,255,255,0.12)" stroke-width="1.5"/>
-            <line x1="0" y1="112.5" x2="1000" y2="112.5" stroke="rgba(255,255,255,0.04)" stroke-width="1" stroke-dasharray="4 4"/>
-            <line x1="0" y1="145" x2="1000" y2="145" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
-            <text x="10" y="14" fill="#64748b" font-size="10" font-family="monospace">+10 dB</text>
-            <text x="10" y="78" fill="#94a3b8" font-size="10" font-family="monospace">0 dB</text>
-            <text x="10" y="142" fill="#64748b" font-size="10" font-family="monospace">-10 dB</text>
-            <path id="eq-curve-area" d="" fill="url(#curveGradient)"/>
-            <path id="eq-curve-path" d="" fill="none" stroke="#ff5500" stroke-width="2.5" stroke-linecap="round"/>
-            <g id="eq-curve-dots"></g>
-          </svg>
-        </div>
-        <div class="eq-bands-grid" id="eq-sliders-container"></div>
-      </div>
-    </div>
-  </section>
-
-  <!-- Section 2: ChatMix & Audio -->
-  <section id="sec-chatmix" class="section">
-    <div class="card">
-      <div class="card-header">
-        <div class="card-title">
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <!-- Card 1: ChatMix Crossfader -->
+  <section class="m3-card">
+    <div class="m3-card-header">
+      <div class="m3-card-title-group">
+        <h2>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/>
           </svg>
-          <span>Real-Time ChatMix Balance</span>
-          <span class="opcode-tag">0x45 · PipeWire Native</span>
-          <span class="badge" id="chatmix-bias-badge">Balanced</span>
-        </div>
+          <span>ChatMix Crossfader</span>
+        </h2>
+        <p>Oyun ve sesli sohbet ses kanalları arasındaki donanımsal dengeyi ayarlar</p>
       </div>
-      <div class="card-body">
-        <div class="chatmix-layout">
-          <div class="dial-wrap">
-            <div class="chatmix-dial">
-              <svg width="150" height="150" viewBox="0 0 120 120" aria-label="ChatMix Balance Dial">
-                <circle cx="60" cy="60" r="48" fill="#080a0f" stroke="#161b24" stroke-width="8"/>
-                <path d="M 26 94 A 48 48 0 0 1 60 12" fill="none" stroke="#ff5500" stroke-width="5" stroke-linecap="round" opacity="0.85"/>
-                <path d="M 60 12 A 48 48 0 0 1 94 94" fill="none" stroke="#00d2ff" stroke-width="5" stroke-linecap="round" opacity="0.85"/>
-                <line x1="60" y1="4" x2="60" y2="12" stroke="#ffffff" stroke-width="2"/>
-                <g id="chatmix-needle" transform="rotate(0 60 60)" style="transition: transform 0.06s ease-out;">
-                  <line x1="60" y1="60" x2="60" y2="20" stroke="#ff5500" stroke-width="3.5" stroke-linecap="round"/>
-                  <circle cx="60" cy="60" r="6" fill="#e2e8f0"/>
-                </g>
-                <text x="22" y="112" fill="#ff5500" font-size="9" font-family="monospace" font-weight="700">GAME</text>
-                <text x="74" y="112" fill="#00d2ff" font-size="9" font-family="monospace" font-weight="700">CHAT</text>
-              </svg>
-            </div>
-            <div style="font-family:var(--font-mono);font-size:0.75rem;color:var(--text-muted);margin-top:0.5rem;text-align:center;">HARDWARE DIAL</div>
-          </div>
+      <div class="m3-pill" id="pill-chatmix-bias">Dengeli</div>
+    </div>
 
-          <div class="chatmix-channels">
-            <div class="channel-row">
-              <div class="channel-header">
-                <div class="channel-header-title">
-                  <span style="color:#ff5500;">●</span>
-                  <span>Game Channel (Arctis_Game)</span>
-                </div>
-                <span class="channel-pct" id="val-game-vol">100%</span>
-              </div>
-              <div class="meter-track">
-                <div class="meter-bar game" id="bar-game-vol" style="width:100%"></div>
-              </div>
-            </div>
-
-            <div class="channel-row">
-              <div class="channel-header">
-                <div class="channel-header-title">
-                  <span style="color:#00d2ff;">●</span>
-                  <span>Chat Channel (Arctis_Chat)</span>
-                </div>
-                <span class="channel-pct" id="val-chat-vol">100%</span>
-              </div>
-              <div class="meter-track">
-                <div class="meter-bar chat" id="bar-chat-vol" style="width:100%"></div>
-              </div>
-            </div>
-
-            <div class="fader-box">
-              <div class="fader-labels">
-                <span style="color:#ff5500;">GAME 100%</span>
-                <span style="color:var(--text-dim);">CENTER DETENT (0 dB)</span>
-                <span style="color:#00d2ff;">CHAT 100%</span>
-              </div>
-              <input type="range" class="crossfader" id="input-chatmix-balance" min="-100" max="100" value="0" step="1" aria-label="ChatMix Balance Slider" oninput="setChatmixBalance(this.value)" />
-            </div>
-          </div>
+    <div class="chatmix-meters">
+      <div class="channel-card">
+        <div class="channel-name">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="6" width="20" height="12" rx="2"/>
+            <path d="M6 12h4m-2-2v4m10-2h.01m-3 0h.01"/>
+          </svg>
+          <span>Oyun Kanalı (Arctis_Game)</span>
         </div>
+        <div class="channel-val" id="lbl-game-vol">100%</div>
       </div>
+
+      <div class="channel-card">
+        <div class="channel-name">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+          </svg>
+          <span>Sohbet Kanalı (Arctis_Chat)</span>
+        </div>
+        <div class="channel-val" id="lbl-chat-vol">100%</div>
+      </div>
+    </div>
+
+    <div class="chatmix-slider-container">
+      <div class="chatmix-slider-track-wrap">
+        <input type="range" class="chatmix-range" id="chatmix-slider" min="-100" max="100" value="0" step="1" aria-label="ChatMix Denge Sürgüsü" oninput="onChatmixSliderInput(this.value)" />
+      </div>
+      <div class="chatmix-scale">
+        <span>🎮 Oyun %100</span>
+        <span>Merkez (0 dB)</span>
+        <span>Sohbet %100 💬</span>
+      </div>
+    </div>
+
+    <div class="chatmix-quick-chips">
+      <button type="button" class="m3-filter-chip" onclick="setQuickChatmix(-70)">🎮 Oyun Ağırlıklı (%70 / %30)</button>
+      <button type="button" class="m3-filter-chip" onclick="setQuickChatmix(0)">⚖️ Tam Dengeli (%100 / %100)</button>
+      <button type="button" class="m3-filter-chip" onclick="setQuickChatmix(70)">💬 Sohbet Ağırlıklı (%30 / %70)</button>
     </div>
   </section>
 
-  <!-- Section 3: Headset Settings -->
-  <section id="sec-settings" class="section">
-    <div class="card">
-      <div class="card-header">
-        <div class="card-title">
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <!-- Card 2: 10-Band Parametric EQ -->
+  <section class="m3-card">
+    <div class="m3-card-header">
+      <div class="m3-card-title-group">
+        <h2>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/>
+          </svg>
+          <span>10-Bant Parametrik Ekolayzer</span>
+        </h2>
+        <p id="eq-active-title">Dahili 10-bant biquad DSP akustik frekans eğrisi (0x33)</p>
+      </div>
+
+      <div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;">
+        <button type="button" class="m3-btn m3-btn-outline" style="padding:0.45rem 1rem;" onclick="resetEqFlat()" title="Tüm frekansları 0 dB yap">
+          <span>Sıfırla (0 dB)</span>
+        </button>
+        <button type="button" class="m3-btn m3-btn-primary" style="padding:0.45rem 1.1rem;" onclick="triggerSaveFlash()">
+          <span>Kulaklığa Kaydet</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Presets Scrollable Filter Chips -->
+    <div class="preset-chips-scroll" id="preset-chips-list">
+      <!-- Will be populated dynamically with Flat, Harman, FPS, CS2, Valorant, Warm Bass, RPG, Smiley, Vocal -->
+    </div>
+
+    <!-- Smooth Spline Canvas -->
+    <div class="eq-canvas-container">
+      <canvas id="eqCanvas"></canvas>
+    </div>
+
+    <!-- 10 Vertical Sliders Grid -->
+    <div class="eq-sliders-grid" id="eq-sliders-container"></div>
+  </section>
+
+  <!-- Card 3: Hardware Controls (Donanım Ayarları) -->
+  <section class="m3-card">
+    <div class="m3-card-header">
+      <div class="m3-card-title-group">
+        <h2>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/>
           </svg>
-          <span>Hardware & DSP Settings</span>
-          <span class="opcode-tag">Live On-Device NVRAM</span>
-        </div>
+          <span>Donanım Ayarları</span>
+        </h2>
+        <p>Kulaklığın dahili donanım, mikrofon ve Bluetooth yapılandırması</p>
       </div>
-      <div class="card-body">
-        <div class="hw-grid">
-          <!-- Mic Gain -->
-          <div class="hw-item">
-            <div class="hw-head">
-              <div>
-                <div class="hw-title">Microphone Hardware Gain</div>
-                <div class="hw-desc">Internal pre-amp ADC gain stage</div>
-              </div>
-              <span class="opcode-tag">0x35</span>
-            </div>
-            <div>
-              <div style="display:flex;justify-content:space-between;font-family:var(--font-mono);font-size:0.75rem;margin-bottom:0.4rem;">
-                <span style="color:var(--text-muted);">Gain:</span>
-                <span id="lbl-mic-gain" style="color:#fff;font-weight:700;">8 / 15 (53%)</span>
-              </div>
-              <input type="range" class="hw-slider" id="rng-mic-gain" min="0" max="15" value="8" step="1" oninput="updateMicGain(this.value)" onchange="patchMicGain(this.value)" />
-            </div>
-          </div>
+    </div>
 
-          <!-- Sidetone -->
-          <div class="hw-item">
-            <div class="hw-head">
-              <div>
-                <div class="hw-title">Mic Sidetone (Loopback)</div>
-                <div class="hw-desc">Real-time zero latency voice monitor</div>
-              </div>
-              <span class="opcode-tag">0x39</span>
-            </div>
-            <div>
-              <div style="font-family:var(--font-mono);font-size:0.75rem;color:var(--text-muted);margin-bottom:0.45rem;">
-                Status: <span id="sidetone-label" style="color:var(--text-main);font-weight:700;">Medium</span>
-              </div>
-              <div class="seg-group" id="seg-sidetone" role="group" aria-label="Sidetone level">
-                <button type="button" class="seg-btn" onclick="setSidetone(0)">Off</button>
-                <button type="button" class="seg-btn" onclick="setSidetone(1)">Low</button>
-                <button type="button" class="seg-btn active" onclick="setSidetone(2)">Medium</button>
-                <button type="button" class="seg-btn" onclick="setSidetone(3)">High</button>
-              </div>
-            </div>
-          </div>
+    <div class="hw-controls-list">
 
-          <!-- Mic Mute LED -->
-          <div class="hw-item">
-            <div class="hw-head">
-              <div>
-                <div class="hw-title">Mic Mute LED Brightness</div>
-                <div class="hw-desc">Physical boom indicator LED</div>
-              </div>
-              <span class="opcode-tag">0x3A</span>
-            </div>
-            <div class="seg-group" id="seg-mute-led" role="group" aria-label="Mic Mute LED Brightness">
-              <button type="button" class="seg-btn" onclick="patchMicLed(0)">Off</button>
-              <button type="button" class="seg-btn" onclick="patchMicLed(1)">Low</button>
-              <button type="button" class="seg-btn" onclick="patchMicLed(2)">Medium</button>
-              <button type="button" class="seg-btn active" onclick="patchMicLed(3)">High</button>
-            </div>
-          </div>
-
-          <!-- Inactivity Auto-Off -->
-          <div class="hw-item">
-            <div class="hw-head">
-              <div>
-                <div class="hw-title">Inactivity Auto-Off</div>
-                <div class="hw-desc">Power down sleep timer</div>
-              </div>
-              <span class="opcode-tag">0xB1</span>
-            </div>
-            <div>
-              <div style="font-family:var(--font-mono);font-size:0.75rem;color:var(--text-muted);margin-bottom:0.4rem;">
-                Timer: <span id="lbl-inactivity" style="color:#fff;font-weight:700;">30 minutes</span>
-              </div>
-              <input type="range" class="hw-slider" id="rng-inactivity" min="0" max="4" value="2" step="1" oninput="updateAutoOffLabel(this.value)" onchange="patchAutoOffFromSlider(this.value)" />
-            </div>
-          </div>
-
-          <!-- Volume Limiter -->
-          <div class="hw-item">
-            <div class="hw-head">
-              <div>
-                <div class="hw-title">EU Volume Limiter</div>
-                <div class="hw-desc">Headphone hearing safety cap</div>
-              </div>
-              <span class="opcode-tag">0x3B</span>
-            </div>
-            <label class="galaxy-toggle">
-              <input type="checkbox" id="chk-volume-limiter" onchange="patchVolumeLimiter(this.checked)" />
-              <span class="toggle-track"><span class="toggle-thumb"></span></span>
-              <span id="lbl-volume-limiter">Disabled (Full Output)</span>
-            </label>
-          </div>
-
-          <!-- Bluetooth Auto Power-On -->
-          <div class="hw-item">
-            <div class="hw-head">
-              <div>
-                <div class="hw-title">Bluetooth Auto Power-On</div>
-                <div class="hw-desc">Enable secondary BT radio on boot</div>
-              </div>
-              <span class="opcode-tag">0xB2</span>
-            </div>
-            <label class="galaxy-toggle">
-              <input type="checkbox" id="chk-bt-power" onchange="patchBtPower(this.checked)" />
-              <span class="toggle-track"><span class="toggle-thumb"></span></span>
-              <span id="lbl-bt-power">Disabled</span>
-            </label>
-          </div>
-
-          <!-- Bluetooth Call Mixing -->
-          <div class="hw-item">
-            <div class="hw-head">
-              <div>
-                <div class="hw-title">Bluetooth Call Mixing</div>
-                <div class="hw-desc">2.4G attenuation during incoming call</div>
-              </div>
-              <span class="opcode-tag">0xB3</span>
-            </div>
-            <div class="seg-group" id="seg-bt-call" role="group" aria-label="Bluetooth Call Behavior">
-              <button type="button" class="seg-btn" onclick="patchBtCall('do_nothing')">Keep 100%</button>
-              <button type="button" class="seg-btn active" onclick="patchBtCall('attenuate_12db')">-12 dB Duck</button>
-              <button type="button" class="seg-btn" onclick="patchBtCall('mute_game')">Mute 2.4G</button>
-            </div>
-          </div>
-
-          <!-- Polling Rate -->
-          <div class="hw-item">
-            <div class="hw-head">
-              <div>
-                <div class="hw-title">Heartbeat Polling Interval</div>
-                <div class="hw-desc">Telemetry battery & status refresh</div>
-              </div>
-              <span class="opcode-tag">Client</span>
-            </div>
-            <div class="seg-group" id="seg-polling" role="group" aria-label="Polling Rate">
-              <button type="button" class="seg-btn" onclick="setPolling(1)">1s</button>
-              <button type="button" class="seg-btn active" onclick="setPolling(2)">2s</button>
-              <button type="button" class="seg-btn" onclick="setPolling(5)">5s</button>
-            </div>
+      <!-- Sidetone (Yan Ton) -->
+      <div class="hw-row">
+        <div class="hw-info">
+          <div class="hw-label">Yan Ton (Sidetone / Loopback)</div>
+          <div class="hw-desc">Mikrofondan gelen kendi sesinizi sıfır gecikmeyle kulaklığa iletir</div>
+        </div>
+        <div class="hw-action">
+          <div class="m3-segmented-btn-group" id="seg-sidetone">
+            <button type="button" class="m3-seg-btn active" onclick="setSidetone(0)">Kapalı</button>
+            <button type="button" class="m3-seg-btn" onclick="setSidetone(1)">Düşük</button>
+            <button type="button" class="m3-seg-btn" onclick="setSidetone(2)">Orta</button>
+            <button type="button" class="m3-seg-btn" onclick="setSidetone(3)">Yüksek</button>
           </div>
         </div>
       </div>
+
+      <!-- Mic Gain (Mikrofon Kazancı) -->
+      <div class="hw-row">
+        <div class="hw-info">
+          <div class="hw-label">Mikrofon Kazancı (ClearCast Gain)</div>
+          <div class="hw-desc">Dahili donanımsal ADC mikrofon ön-yükseltici seviyesi</div>
+        </div>
+        <div class="hw-action">
+          <span id="lbl-mic-gain" style="font-family:var(--font-mono);font-size:0.875rem;font-weight:600;min-width:70px;text-align:right;">12 / 15</span>
+          <input type="range" class="m3-horizontal-slider" id="rng-mic-gain" min="0" max="15" value="12" step="1" oninput="onMicGainInput(this.value)" onchange="patchMicGain(this.value)" />
+        </div>
+      </div>
+
+      <!-- Mic Mute LED (Sessiz LED Parlaklığı) -->
+      <div class="hw-row">
+        <div class="hw-info">
+          <div class="hw-label">Mikrofon Sessiz Gösterge LED'i</div>
+          <div class="hw-desc">Mikrofon bomu üzerindeki kırmızı sessize alma LED'inin parlaklığı</div>
+        </div>
+        <div class="hw-action">
+          <div class="m3-segmented-btn-group" id="seg-mute-led">
+            <button type="button" class="m3-seg-btn" onclick="patchMicLed(0)">Kapalı</button>
+            <button type="button" class="m3-seg-btn" onclick="patchMicLed(1)">Düşük</button>
+            <button type="button" class="m3-seg-btn" onclick="patchMicLed(2)">Orta</button>
+            <button type="button" class="m3-seg-btn active" onclick="patchMicLed(3)">Yüksek</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Volume Limiter (EU Ses Sınırlayıcı) -->
+      <div class="hw-row">
+        <div class="hw-info">
+          <div class="hw-label">EU Ses Sınırlayıcı (Volume Limiter)</div>
+          <div class="hw-desc">İşitme sağlığı için maksimum ses çıkışını AB standartlarında sınırlar</div>
+        </div>
+        <div class="hw-action">
+          <label class="m3-switch">
+            <input type="checkbox" id="chk-volume-limiter" onchange="patchVolumeLimiter(this.checked)" />
+            <span class="m3-switch-track"><span class="m3-switch-thumb"></span></span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Sleep Timer (Otomatik Kapanma) -->
+      <div class="hw-row">
+        <div class="hw-info">
+          <div class="hw-label">Otomatik Kapanma Süresi (Sleep Timer)</div>
+          <div class="hw-desc">Ses sinyali ve bağlantı olmadığında kulaklığı otomatik kapatır</div>
+        </div>
+        <div class="hw-action">
+          <div class="m3-segmented-btn-group" id="seg-auto-off">
+            <button type="button" class="m3-seg-btn" onclick="patchAutoOffMinutes(5)">5 dk</button>
+            <button type="button" class="m3-seg-btn" onclick="patchAutoOffMinutes(15)">15 dk</button>
+            <button type="button" class="m3-seg-btn active" onclick="patchAutoOffMinutes(30)">30 dk</button>
+            <button type="button" class="m3-seg-btn" onclick="patchAutoOffMinutes(0)">Asla</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bluetooth Auto Power-On -->
+      <div class="hw-row">
+        <div class="hw-info">
+          <div class="hw-label">Bluetooth Açılış Varsayılanı</div>
+          <div class="hw-desc">Kulaklık açıldığında Bluetooth radyosunu otomatik olarak açar</div>
+        </div>
+        <div class="hw-action">
+          <label class="m3-switch">
+            <input type="checkbox" id="chk-bt-power" onchange="patchBtPower(this.checked)" />
+            <span class="m3-switch-track"><span class="m3-switch-thumb"></span></span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Bluetooth Call Mixing -->
+      <div class="hw-row">
+        <div class="hw-info">
+          <div class="hw-label">Bluetooth Çağrı Sırasında Ses Davranışı</div>
+          <div class="hw-desc">Telefon araması geldiğinde 2.4GHz oyun sesine uygulanacak işlem</div>
+        </div>
+        <div class="hw-action">
+          <div class="m3-segmented-btn-group" id="seg-bt-call">
+            <button type="button" class="m3-seg-btn" onclick="patchBtCall('do_nothing')">Değiştirme</button>
+            <button type="button" class="m3-seg-btn active" onclick="patchBtCall('attenuate_12db')">-12 dB Kıs</button>
+            <button type="button" class="m3-seg-btn" onclick="patchBtCall('mute_game')">Oyun Sesini Sustur</button>
+          </div>
+        </div>
+      </div>
+
     </div>
   </section>
 
-  <!-- Section 4: Presets -->
-  <section id="sec-presets" class="section">
-    <div class="card">
-      <div class="card-header">
-        <div class="card-title">
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
-          </svg>
-          <span>Acoustic Profiles & Reference EQ Presets</span>
-          <span class="opcode-tag">Hardware Curve Profiles</span>
+  <!-- Card 4: Diagnostics & Telemetry (Collapsible) -->
+  <details class="m3-details">
+    <summary>
+      <span>Teknik Telemetri & USB Protokol Bilgileri</span>
+      <span style="font-size:0.75rem;font-family:var(--font-mono);" id="txt-last-update">Canlı</span>
+    </summary>
+    <div class="diag-body">
+      <div class="diag-grid">
+        <div class="diag-card">
+          <div class="diag-label">Pil Seviyesi</div>
+          <div class="diag-val" id="diag-battery">--%</div>
         </div>
-        <div class="seg-group" id="preset-tabs" role="group" aria-label="Preset categories">
-          <button type="button" class="seg-btn active" onclick="filterPresets('all')">All</button>
-          <button type="button" class="seg-btn" onclick="filterPresets('esports')">Esports</button>
-          <button type="button" class="seg-btn" onclick="filterPresets('audio')">Audio</button>
-          <button type="button" class="seg-btn" onclick="filterPresets('rpg')">RPG</button>
+        <div class="diag-card">
+          <div class="diag-label">Şarj Durumu</div>
+          <div class="diag-val" id="diag-charging">Bilinmiyor</div>
+        </div>
+        <div class="diag-card">
+          <div class="diag-label">Kablosuz Durum</div>
+          <div class="diag-val" id="diag-wireless">Bağlantı Yok</div>
+        </div>
+        <div class="diag-card">
+          <div class="diag-label">Donanım Mikrofonu</div>
+          <div class="diag-val" id="diag-mic">Açık</div>
         </div>
       </div>
-      <div class="card-body">
-        <div class="presets-grid" id="presets-grid"></div>
-
-        <form class="save-profile-bar" id="form-save-profile" onsubmit="saveProfile(event)">
-          <div style="display:flex;align-items:center;gap:0.45rem;">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/>
-            </svg>
-            <strong style="font-size:0.8rem;color:#fff;">Save Active Curve:</strong>
-          </div>
-          <input type="text" class="input-text" id="inp-profile-name" placeholder="Profile name (e.g. footsteps-plus)" required pattern="[A-Za-z0-9_\-]+" style="width:200px;" />
-          <input type="text" class="input-text" id="inp-profile-desc" placeholder="Description (optional)" style="flex:1;min-width:200px;" />
-          <button type="submit" class="btn btn-primary">Save & Activate</button>
-        </form>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;">
+        <span style="font-size:0.8125rem;color:var(--md-sys-color-on-surface-variant);">Ham Durum JSON Çerçevesi</span>
+        <button type="button" class="m3-btn m3-btn-outline" style="padding:0.25rem 0.75rem;font-size:0.75rem;" onclick="copyRawJson()">JSON Kopyala</button>
       </div>
+      <pre class="diag-json" id="raw-telemetry-json">Telemetri bekleniyor...</pre>
     </div>
-  </section>
+  </details>
 
-  <!-- Section 5: Diagnostics -->
-  <section id="sec-diag" class="section">
-    <div class="card">
-      <div class="card-header">
-        <div class="card-title">
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
-          </svg>
-          <span>Hardware Telemetry & USB Protocol Diagnostics</span>
-          <span class="opcode-tag">Live HID Heartbeat</span>
-        </div>
-        <div id="last-updated-label" style="font-family:var(--font-mono);font-size:0.72rem;color:var(--text-muted);">Awaiting telemetry...</div>
-      </div>
-      <div class="card-body">
-        <div class="telemetry-grid" id="diag-grid">
-          <!-- Battery -->
-          <div class="stat-tile">
-            <div class="stat-label">
-              <span>Battery Level</span>
-              <span class="opcode-tag">0xB7</span>
-            </div>
-            <div class="stat-value">
-              <span id="val-battery">--%</span>
-              <span id="val-battery-raw" style="font-size:0.75rem;color:var(--text-dim);margin-left:0.35rem;"></span>
-            </div>
-            <div class="battery-bar-wrap" role="progressbar" aria-label="Battery Status">
-              <div class="battery-bar-fill" id="battery-bar" style="width:0%"></div>
-            </div>
-          </div>
+  <footer class="m3-footer">
+    <span>SteelSeries Arctis Nova 7 — Material Design 3 Companion Dashboard</span>
+  </footer>
 
-          <!-- Charging -->
-          <div class="stat-tile">
-            <div class="stat-label">
-              <span>Charging State</span>
-              <span class="opcode-tag">0xBB</span>
-            </div>
-            <div class="stat-value" id="val-charging" style="font-size:1.15rem;">Unknown</div>
-            <div class="stat-sub" id="val-charging-sub">USB-C Power Management</div>
-          </div>
-
-          <!-- Link / Wireless -->
-          <div class="stat-tile">
-            <div class="stat-label">
-              <span>2.4GHz Link</span>
-              <span class="opcode-tag">0xB9</span>
-            </div>
-            <div class="stat-value" id="val-wireless">Disconnected</div>
-            <div class="stat-sub" id="val-pid">VID 0x1038</div>
-          </div>
-
-          <!-- Mic Mute State -->
-          <div class="stat-tile">
-            <div class="stat-label">
-              <span>Microphone Mute</span>
-              <span class="opcode-tag">0x52</span>
-            </div>
-            <div class="stat-value" id="val-mic-mute" style="font-size:1.15rem;">Unknown</div>
-            <div class="stat-sub" id="val-mic-sub">Hardware Switch Telemetry</div>
-          </div>
-        </div>
-
-        <div style="margin-top:1.25rem;">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;">
-            <h3 style="font-size:0.85rem;font-weight:700;color:#fff;">Raw Telemetry JSON Frame</h3>
-            <button type="button" class="btn" style="padding:0.25rem 0.6rem;font-size:0.72rem;" onclick="copyRawJson()">Copy JSON</button>
-          </div>
-          <pre class="raw-json" id="raw-telemetry">Waiting for incoming telemetry frame...</pre>
-        </div>
-      </div>
-    </div>
-  </section>
 </main>
 
-<div id="toast-container" aria-live="polite"></div>
-
-<footer class="site-footer">
-  <span>Arctis Nova 7 Hardware DSP Suite</span>
-  <span>·</span>
-  <span>Zero-Dependency Micro-UI</span>
-  <span>·</span>
-  <a href="#" onclick="alert('Supported API endpoints:\nGET /api/status\nPOST /api/eq\nGET/POST /api/presets\nPOST /api/settings\nPOST /api/sidetone\nPOST /api/chatmix\nPOST /api/save-flash\nGET /api/events');return false;">API Endpoints</a>
-  <span>·</span>
-  <span>Shortcuts: 1-5 (Tabs), R (Reset), S (Save)</span>
-</footer>
+<!-- M3 Floating Snackbar -->
+<div id="snackbar">
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <polyline points="20 6 9 17 4 12"/>
+  </svg>
+  <span id="snackbar-text">İşlem başarıyla tamamlandı</span>
+</div>
 
 <script>
-(function(){
-  // Section Navigation & Keyboard Shortcuts
-  window.showSection = function(id){
-    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-    const sec = document.getElementById('sec-' + id);
-    if(sec) sec.classList.add('active');
-
-    document.querySelectorAll('.nav-pills .tab-btn').forEach(b => {
-      b.classList.remove('active');
-      b.setAttribute('aria-selected', 'false');
-    });
-    const activeTab = document.getElementById('tab-btn-' + id);
-    if(activeTab){
-      activeTab.classList.add('active');
-      activeTab.setAttribute('aria-selected', 'true');
-    }
-  };
-
-  // Keyboard Navigation (Anti-slop efficiency)
-  window.addEventListener('keydown', function(e){
-    if(e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') return;
-    if(e.key === '1') showSection('eq');
-    else if(e.key === '2') showSection('chatmix');
-    else if(e.key === '3') showSection('settings');
-    else if(e.key === '4') showSection('presets');
-    else if(e.key === '5') showSection('diag');
-    else if(e.key === 'r' || e.key === 'R') resetEqFlat();
-    else if(e.key === 's' || e.key === 'S'){
-      e.preventDefault();
-      triggerSaveFlash();
-    }
-  });
-
+(function() {
   const EQ_FREQS = [31, 62, 125, 250, 500, 1000, 2000, 4000, 8000, 16000];
-  const EQ_LABELS = ["31", "62", "125", "250", "500", "1k", "2k", "4k", "8k", "16k"];
+  const EQ_LABELS = ["31 Hz", "62 Hz", "125 Hz", "250 Hz", "500 Hz", "1 kHz", "2 kHz", "4 kHz", "8 kHz", "16 kHz"];
+
+  // Standard Audiophile and Gaming Presets
+  const PRESETS = [
+    { name: "flat", label: "Flat", desc: "Tamamen nötr 0 dB referans yanıtı", gains: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0] },
+    { name: "harman", label: "Harman Target", desc: "Doğal netlik ve dengeli sub-bass hedef eğrisi", gains: [2, 1, -1.5, -2, 0, 0.5, 1.5, 2.5, -1, 1.5] },
+    { name: "fps", label: "FPS Tactical", desc: "Ayak sesleri ve çevresel netlik için tiz artışı", gains: [-3, -1.5, -2, -2.5, 0, 1, 2.5, 4, 1.5, 0] },
+    { name: "cs2", label: "CS2", desc: "Bomba çözme ve ayak sesleri için optimize", gains: [-2.5, -1, -2, -1.5, 0.5, 1.5, 3.5, 4.5, 2, -0.5] },
+    { name: "valorant", label: "Valorant", desc: "Yetenek sesleri ve yönsel ping netliği", gains: [-3, -2, -1.5, -1, 0, 1, 3, 4, 2.5, 0] },
+    { name: "warm_bass", label: "Warm Bass", desc: "Derin ve sıcak bas vurgusu", gains: [4, 3.5, 2.5, 1, 0, 0, 0.5, 1, 1, 0.5] },
+    { name: "rpg_cinema", label: "RPG Cinema", desc: "Sinematik diyaloglar ve derin patlama sesleri", gains: [3, 2, 1, 0, -1, 0.5, 2, 3, 2.5, 2] },
+    { name: "smiley", label: "Smiley", desc: "Klasik dinamik V-şekilli eğlenceli ses", gains: [3.5, 2.5, 1, -1, -2, -1, 1, 2.5, 3.5, 2.5] },
+    { name: "vocal", label: "Vocal", desc: "Net konuşma, podcast ve sesli sohbet odaklı", gains: [-3, -2, -1, 0, 1.5, 2.5, 3, 2, 0.5, -0.5] }
+  ];
+
   let currentBands = EQ_FREQS.map((f, i) => ({
     frequency_hz: f,
-    gain_db: [2, 1, -1.5, -2, 0, 0.5, 1.5, 2.5, -1, 1.5][i],
+    gain_db: PRESETS[1].gains[i],
     q_factor: 1.414,
     filter_type: "peaking"
   }));
-  let activeProfileName = "harman";
-  let serverPresets = [];
-  let selectedCategory = "all";
-  let isDraggingSlider = false;
+
+  let activePresetName = "harman";
   let eqDebounceTimer = null;
+  let isDraggingSlider = false;
+  let snackbarTimer = null;
 
-  function showToast(msg, err = false){
-    const c = document.getElementById('toast-container');
-    const el = document.createElement('div');
-    el.className = 'toast' + (err ? ' err' : '');
-    el.textContent = msg;
-    c.appendChild(el);
-    setTimeout(() => el.remove(), 3200);
+  // Snackbar feedback
+  function showSnackbar(msg) {
+    const el = document.getElementById('snackbar');
+    const txt = document.getElementById('snackbar-text');
+    txt.textContent = msg;
+    el.classList.add('show');
+    if (snackbarTimer) clearTimeout(snackbarTimer);
+    snackbarTimer = setTimeout(() => {
+      el.classList.remove('show');
+    }, 2800);
   }
 
-  function encodeGainByte(g){
-    const c = Math.max(-10, Math.min(10, g));
-    return Math.round(2 * (10 + c));
+  // --- EQ Sliders & Canvas ---
+  function initPresetChips() {
+    const list = document.getElementById('preset-chips-list');
+    list.innerHTML = '';
+    PRESETS.forEach(p => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'm3-filter-chip' + (p.name === activePresetName ? ' active' : '');
+      btn.id = 'chip-' + p.name;
+      btn.innerHTML = `<span>${p.label}</span>`;
+      btn.onclick = () => activatePreset(p);
+      list.appendChild(btn);
+    });
   }
 
-  function escapeHtml(s){
-    if(s == null) return "";
-    return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
-  }
-
-  function initEqSliders(){
+  function initEqSliders() {
     const container = document.getElementById('eq-sliders-container');
     container.innerHTML = '';
-    currentBands.forEach((band, idx) => {
-      const strip = document.createElement('div');
-      strip.className = 'eq-band-strip';
-      strip.innerHTML = `
-        <div class="eq-gain-badge" id="eq-badge-${idx}" title="Click to reset band to 0 dB" onclick="resetBand(${idx})">0.0 dB</div>
+    currentBands.forEach((band, i) => {
+      const col = document.createElement('div');
+      col.className = 'eq-column';
+      col.innerHTML = `
+        <div class="eq-gain-readout" id="eq-readout-${i}" onclick="resetSingleBand(${i})" title="0 dB yap">${band.gain_db.toFixed(1)} dB</div>
         <div class="eq-slider-holder">
-          <input type="range" class="eq-vslider" id="eq-slider-${idx}" min="-10" max="10" step="0.5" value="${band.gain_db}" aria-label="${EQ_LABELS[idx]} Hz" oninput="updateBand(${idx},this.value)" onpointerdown="isDraggingSlider=true" onpointerup="isDraggingSlider=false" onpointercancel="isDraggingSlider=false">
+          <input type="range" class="eq-vslider" id="eq-slider-${i}" min="-10" max="10" step="0.5" value="${band.gain_db}" aria-label="${EQ_LABELS[i]}" oninput="onEqSliderInput(${i}, this.value)" onpointerdown="isDraggingSlider=true" onpointerup="isDraggingSlider=false" onpointercancel="isDraggingSlider=false" />
         </div>
-        <div class="eq-freq-label">${EQ_LABELS[idx]} Hz</div>
-        <div class="eq-raw-byte" id="eq-byte-${idx}">0x14</div>
-        <div class="eq-sub-control">
-          <input type="number" class="eq-q-input" id="eq-q-${idx}" value="${band.q_factor.toFixed(2)}" min="0.1" max="10.0" step="0.1" title="Q factor" oninput="updateQ(${idx},this.value)">
-          <select class="eq-filter-select" id="eq-flt-${idx}" onchange="updateFilter(${idx},this.value)">
-            <option value="peaking">Peak</option>
-            <option value="low_shelf">LowShelf</option>
-            <option value="high_shelf">HighShelf</option>
-            <option value="low_pass">LowPass</option>
-            <option value="high_pass">HighPass</option>
-          </select>
-        </div>`;
-      container.appendChild(strip);
+        <div class="eq-freq-label">${EQ_LABELS[i]}</div>
+      `;
+      container.appendChild(col);
     });
-    updateEqUiFromState();
+    updateEqReadouts();
   }
 
-  window.resetBand = function(idx){
+  window.onEqSliderInput = function(idx, val) {
+    const db = parseFloat(val) || 0.0;
+    currentBands[idx].gain_db = db;
+    updateSingleReadout(idx, db);
+    drawEqCurve();
+    scheduleEqSend();
+  };
+
+  window.resetSingleBand = function(idx) {
     currentBands[idx].gain_db = 0.0;
-    const slider = document.getElementById('eq-slider-' + idx);
-    if(slider) slider.value = '0';
-    updateEqUiFromState();
-    scheduleLiveEqApply();
+    const s = document.getElementById('eq-slider-' + idx);
+    if (s) s.value = '0';
+    updateSingleReadout(idx, 0.0);
+    drawEqCurve();
+    scheduleEqSend();
   };
 
-  window.updateBand = function(idx, val){
-    currentBands[idx].gain_db = parseFloat(val) || 0.0;
-    updateEqUiFromState();
-    if(document.getElementById('chk-live-eq').checked) scheduleLiveEqApply();
-  };
-
-  window.updateQ = function(idx, val){
-    currentBands[idx].q_factor = Math.max(0.1, Math.min(10.0, parseFloat(val) || 1.414));
-    const qInp = document.getElementById('eq-q-' + idx);
-    if(qInp) qInp.value = currentBands[idx].q_factor.toFixed(2);
-    renderEqCurve();
-    if(document.getElementById('chk-live-eq').checked) scheduleLiveEqApply();
-  };
-
-  window.updateFilter = function(idx, val){
-    currentBands[idx].filter_type = val;
-    renderEqCurve();
-    if(document.getElementById('chk-live-eq').checked) scheduleLiveEqApply();
-  };
-
-  function updateEqUiFromState(){
-    currentBands.forEach((band, idx) => {
-      const slider = document.getElementById('eq-slider-' + idx);
-      const badge = document.getElementById('eq-badge-' + idx);
-      const rawEl = document.getElementById('eq-byte-' + idx);
-      if(slider && !isDraggingSlider) slider.value = String(band.gain_db);
-      if(badge){
-        const s = band.gain_db > 0.01 ? 'pos' : band.gain_db < -0.01 ? 'neg' : '';
-        badge.textContent = (band.gain_db > 0 ? '+' : '') + band.gain_db.toFixed(1) + ' dB';
-        badge.className = 'eq-gain-badge ' + s;
-      }
-      if(rawEl){
-        const raw = encodeGainByte(band.gain_db);
-        rawEl.textContent = '0x' + raw.toString(16).toUpperCase().padStart(2, '0') + ' (' + raw + ')';
-      }
-    });
-    renderEqCurve();
+  function updateSingleReadout(idx, val) {
+    const el = document.getElementById('eq-readout-' + idx);
+    if (!el) return;
+    el.textContent = (val > 0 ? '+' : '') + val.toFixed(1) + ' dB';
+    el.classList.toggle('positive', val > 0.01);
+    el.classList.toggle('negative', val < -0.01);
   }
 
-  function renderEqCurve(){
-    const pathEl = document.getElementById('eq-curve-path');
-    const areaEl = document.getElementById('eq-curve-area');
-    const dotsEl = document.getElementById('eq-curve-dots');
-    if(!pathEl || !areaEl || !dotsEl) return;
-
-    const width = 1000;
-    const midY = 80;
-    const scaleY = 6.5;
-    const samples = 140;
-    let dPath = '';
-
-    for(let s = 0; s <= samples; s++){
-      const normX = s / samples;
-      const px = 45 + normX * (width - 90);
-      let totalDb = 0;
-      currentBands.forEach((b, idx) => {
-        const centerNorm = idx / 9;
-        const q = Math.max(0.25, b.q_factor || 1.414);
-        const sigma = 0.095 / Math.sqrt(q);
-        const dist = normX - centerNorm;
-        const weight = Math.exp(-(dist * dist) / (2 * sigma * sigma));
-        totalDb += b.gain_db * weight;
-      });
-      const py = midY - totalDb * scaleY;
-      dPath += (s === 0 ? 'M ' : ' L ') + px.toFixed(1) + ' ' + py.toFixed(1);
-    }
-
-    pathEl.setAttribute('d', dPath);
-    const dArea = dPath + ' L ' + (width - 45) + ' ' + midY + ' L 45 ' + midY + ' Z';
-    areaEl.setAttribute('d', dArea);
-
-    dotsEl.innerHTML = '';
+  function updateEqReadouts() {
     currentBands.forEach((b, i) => {
-      const cx = 45 + (i * (width - 90) / 9);
-      const cy = midY - b.gain_db * scaleY;
-      const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-      circle.setAttribute('cx', cx.toFixed(1));
-      circle.setAttribute('cy', cy.toFixed(1));
-      circle.setAttribute('r', '4');
-      circle.setAttribute('fill', '#ffffff');
-      circle.setAttribute('stroke', '#ff5500');
-      circle.setAttribute('stroke-width', '2');
-      dotsEl.appendChild(circle);
+      const slider = document.getElementById('eq-slider-' + i);
+      if (slider && !isDraggingSlider) slider.value = String(b.gain_db);
+      updateSingleReadout(i, b.gain_db);
     });
   }
 
-  window.scheduleLiveEqApply = function(){
-    if(eqDebounceTimer) clearTimeout(eqDebounceTimer);
+  function activatePreset(p) {
+    activePresetName = p.name;
+    document.querySelectorAll('.m3-filter-chip').forEach(c => c.classList.remove('active'));
+    const chip = document.getElementById('chip-' + p.name);
+    if (chip) chip.classList.add('active');
+
+    p.gains.forEach((g, i) => {
+      currentBands[i].gain_db = g;
+    });
+
+    updateEqReadouts();
+    drawEqCurve();
+    sendEqToServer(p.name, p.desc);
+    showSnackbar(`"${p.label}" önayarı kulaklığa uygulandı`);
+  }
+
+  window.resetEqFlat = function() {
+    const flatPreset = PRESETS.find(p => p.name === 'flat') || PRESETS[0];
+    activatePreset(flatPreset);
+  };
+
+  function scheduleEqSend() {
+    if (eqDebounceTimer) clearTimeout(eqDebounceTimer);
     eqDebounceTimer = setTimeout(() => {
-      sendCurrentEq(null, null, false);
-    }, 75);
-  };
+      sendEqToServer(activePresetName, "Özel Akustik Eğri");
+    }, 90);
+  }
 
-  window.resetEqFlat = function(){
-    currentBands.forEach(b => { b.gain_db = 0.0; });
-    updateEqUiFromState();
-    sendCurrentEq("flat", "Flat reference 0 dB", true);
-    showToast("EQ reset to Flat (0 dB)");
-  };
-
-  window.applyEqNow = function(){
-    sendCurrentEq(null, null, true);
-    showToast("EQ applied to hardware (0x33)");
-  };
-
-  async function sendCurrentEq(profileName = null, profileDesc = null, saveToProfile = false){
+  async function sendEqToServer(profileName, description) {
     const payload = {
       gains_db: currentBands.map(b => b.gain_db),
       q_factors: currentBands.map(b => b.q_factor),
-      bands: currentBands.map(b => ({
-        frequency_hz: b.frequency_hz,
-        gain_db: b.gain_db,
-        q_factor: b.q_factor,
-        filter_type: b.filter_type
-      })),
-      profile_name: profileName || activeProfileName,
-      save: saveToProfile
+      bands: currentBands,
+      profile_name: profileName || activePresetName,
+      save: true
     };
     try {
-      const res = await fetch("/api/eq", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      const res = await fetch('/api/eq', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
       const data = await res.json();
-      if(!res.ok || data.ok === false) throw new Error(data.error || `HTTP ${res.status}`);
-      if(profileName){
-        activeProfileName = profileName;
-        document.getElementById('active-eq-badge').textContent = "Active: " + activeProfileName;
-      }
-    } catch(err){
-      console.warn("EQ apply error:", err);
-      showToast("EQ sync error: " + err.message, true);
+      if (!res.ok || data.ok === false) throw new Error(data.error || `HTTP ${res.status}`);
+      document.getElementById('eq-active-title').textContent = `Aktif Profil: ${profileName || activePresetName} (Dahili 0x33)`;
+    } catch(err) {
+      console.warn("EQ send error:", err);
     }
   }
 
-  // Presets Catalog
-  const BUILTIN_CATALOG = [
-    { name: "flat", title: "Flat Reference", category: "audio", tag: "Studio", description: "Completely neutral 0.0 dB response across all 10 bands.", gains_db: [0,0,0,0,0,0,0,0,0,0] },
-    { name: "harman", title: "Harman 2018 Target", category: "audio", tag: "Harman", description: "Sub-bass elevation and pinna gain compensation for natural clarity.", gains_db: [2, 1, -1.5, -2, 0, 0.5, 1.5, 2.5, -1, 1.5] },
-    { name: "competitive", title: "Esports Footsteps", category: "esports", tag: "Esports", description: "Boosts 2-4 kHz audio cues while attenuating low frequency rumbles.", gains_db: [-3, -1.5, -2, -2.5, 0, 1, 2.5, 4, 1.5, 0] },
-    { name: "bass", title: "Warm Bass Boost", category: "audio", tag: "Bass", description: "Deep sub-bass punch with smooth lower-mid transition.", gains_db: [3.5, 3, 2, 0.5, 0, 0, 0.5, 1, 1, 0.5] },
-    { name: "vocal", title: "Vocal & Podcast Clarity", category: "audio", tag: "Voice", description: "Elevates speech articulation and reduces proximity bass effect.", gains_db: [-3, -2, -1, 0, 1.5, 2.5, 3, 2, 0.5, -0.5] },
-    { name: "smiley", title: "Classic V-Shape", category: "audio", tag: "Dynamic", description: "Punchy sub-bass and crisp upper treble sparkle.", gains_db: [3, 2, 1, -1, -1.5, -1.0, 1, 2.5, 3, 2] }
-  ];
+  // --- Smooth Canvas Spline Renderer ---
+  function drawEqCurve() {
+    const canvas = document.getElementById('eqCanvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const rect = canvas.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
 
-  function getMergedPresets(){
-    const map = new Map();
-    BUILTIN_CATALOG.forEach(i => map.set(i.name.toLowerCase(), { ...i }));
-    serverPresets.forEach(srv => {
-      const k = (srv.name || "").toLowerCase();
-      if(!k) return;
-      if(map.has(k)){
-        const ex = map.get(k);
-        map.set(k, { ...ex, gains_db: srv.gains_db || ex.gains_db, bands: srv.bands || ex.bands });
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    ctx.resetTransform();
+    ctx.scale(dpr, dpr);
+
+    const w = rect.width;
+    const h = rect.height;
+    const midY = h / 2;
+    const scaleY = (h * 0.40) / 10.0; // +/- 10 dB range
+
+    // Clear background
+    ctx.clearRect(0, 0, w, h);
+
+    // Subtle Grid Lines
+    ctx.strokeStyle = '#2B2930';
+    ctx.lineWidth = 1;
+
+    // +10, +5, 0, -5, -10 dB horizontal lines
+    [-10, -5, 0, 5, 10].forEach(db => {
+      const y = midY - (db * scaleY);
+      ctx.beginPath();
+      if (db === 0) {
+        ctx.strokeStyle = '#49454F';
+        ctx.lineWidth = 1.5;
       } else {
-        map.set(k, {
-          name: srv.name,
-          title: srv.name,
-          category: "custom",
-          tag: "Custom",
-          description: srv.description || "Custom curve profile",
-          gains_db: srv.gains_db || [0,0,0,0,0,0,0,0,0,0],
-          bands: srv.bands
-        });
+        ctx.strokeStyle = '#2B2930';
+        ctx.lineWidth = 1;
       }
-    });
-    return Array.from(map.values());
-  }
+      ctx.moveTo(0, y);
+      ctx.lineTo(w, y);
+      ctx.stroke();
 
-  window.filterPresets = function(cat){
-    selectedCategory = cat;
-    document.querySelectorAll('#preset-tabs .seg-btn').forEach(b => {
-      b.classList.toggle('active', b.getAttribute('onclick').includes(cat));
+      ctx.fillStyle = db === 0 ? '#CAC4D0' : '#938F99';
+      ctx.font = '10px Roboto, sans-serif';
+      ctx.fillText((db > 0 ? '+' : '') + db + ' dB', 8, y - 3);
     });
-    renderPresetsGrid();
-  };
 
-  function renderPresetsGrid(){
-    const grid = document.getElementById('presets-grid');
-    if(!grid) return;
-    const all = getMergedPresets();
-    const filtered = selectedCategory === 'all' ? all : all.filter(p => p.category === selectedCategory);
-    grid.innerHTML = '';
-    filtered.forEach(preset => {
-      const isActive = (activeProfileName || "").toLowerCase() === preset.name.toLowerCase();
-      const card = document.createElement('div');
-      card.className = 'preset-card' + (isActive ? ' active' : '');
-      const barsHtml = (preset.gains_db || []).map(g => `<div class="preset-mini-bar" style="height:${Math.max(3, Math.round(((g + 10) / 20) * 22))}px"></div>`).join('');
-      card.innerHTML = `
-        <div>
-          <div class="preset-card-top">
-            <span class="preset-name">${escapeHtml(preset.title || preset.name)}</span>
-            <span class="preset-tag">${isActive ? 'ACTIVE' : escapeHtml(preset.tag || 'Preset')}</span>
-          </div>
-          <div class="preset-desc">${escapeHtml(preset.description || '')}</div>
-        </div>
-        <div class="preset-mini-bars">${barsHtml}</div>`;
-      card.addEventListener('click', () => activateNamedPreset(preset));
-      grid.appendChild(card);
+    // Vertical Frequency Guides & Spline Points
+    const padX = 24;
+    const availW = w - (padX * 2);
+    const bandPoints = currentBands.map((b, i) => {
+      const x = padX + (i / 9) * availW;
+      const y = midY - (b.gain_db * scaleY);
+      return { x, y, freq: b.frequency_hz };
     });
-  }
 
-  async function activateNamedPreset(presetObj){
-    if(Array.isArray(presetObj.gains_db) && presetObj.gains_db.length === 10){
+    // Continuous spline points
+    const samples = 140;
+    const curvePath = [];
+    for (let s = 0; s <= samples; s++) {
+      const norm = s / samples;
+      const px = padX + norm * availW;
+
+      // Logarithmic acoustic filter summing
+      let totalGain = 0;
       currentBands.forEach((b, i) => {
-        b.gain_db = Number(presetObj.gains_db[i]);
-        if(Array.isArray(presetObj.bands) && presetObj.bands[i]){
-          b.q_factor = presetObj.bands[i].q_factor || 1.414;
-          b.filter_type = presetObj.bands[i].filter_type || "peaking";
-        } else {
-          b.q_factor = 1.414;
-          b.filter_type = "peaking";
-        }
+        const centerNorm = i / 9;
+        const q = b.q_factor || 1.414;
+        const sigma = 0.09 / Math.sqrt(q);
+        const dist = norm - centerNorm;
+        const weight = Math.exp(-(dist * dist) / (2 * sigma * sigma));
+        totalGain += b.gain_db * weight;
       });
-      updateEqUiFromState();
-    }
-    try {
-      const res = await fetch("/api/presets", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: presetObj.name,
-          description: presetObj.description || presetObj.title || presetObj.name,
-          gains_db: currentBands.map(b => b.gain_db),
-          q_factors: currentBands.map(b => b.q_factor),
-          bands: currentBands,
-          save: true
-        })
-      });
-      const data = await res.json();
-      if(!res.ok || data.ok === false) throw new Error(data.error || `HTTP ${res.status}`);
-      activeProfileName = presetObj.name;
-      document.getElementById('active-eq-badge').textContent = "Active: " + activeProfileName;
-      renderPresetsGrid();
-      showToast(`Activated profile: ${presetObj.title || presetObj.name}`);
-    } catch(err){
-      showToast(`Preset error: ${err.message}`, true);
-    }
-  }
 
-  window.saveProfile = async function(e){
-    e.preventDefault();
-    const nameInp = document.getElementById('inp-profile-name');
-    const descInp = document.getElementById('inp-profile-desc');
-    const name = nameInp.value.trim();
-    if(!name) return;
-    await sendCurrentEq(name, descInp.value.trim() || `Custom curve (${name})`, true);
-    nameInp.value = '';
-    descInp.value = '';
-    try {
-      const r = await fetch('/api/presets');
-      if(r.ok){
-        const d = await r.json();
-        if(Array.isArray(d.presets)) serverPresets = d.presets;
-      }
-      renderPresetsGrid();
-    } catch(_){}
-  };
-
-  // Status & Telemetry Snapshot Handler
-  function applyStatusSnapshot(st){
-    if(!st || typeof st !== 'object') return;
-
-    // USB Connection Badge
-    const usbBadge = document.getElementById('usb-badge');
-    const usbText = document.getElementById('usb-badge-text');
-    if(st.usb_connected){
-      usbBadge.className = 'badge ok';
-      usbText.textContent = `USB Connected (${st.product_id || '0x1038'})`;
-    } else {
-      usbBadge.className = 'badge warn';
-      usbText.textContent = 'USB Standby';
+      const py = midY - (totalGain * scaleY);
+      curvePath.push({ x: px, y: py });
     }
 
-    // Battery
-    const valBatt = document.getElementById('val-battery');
-    const valBattRaw = document.getElementById('val-battery-raw');
-    const battBar = document.getElementById('battery-bar');
-    if(typeof st.battery_percent === 'number'){
-      valBatt.textContent = st.battery_percent + '%';
-      if(valBattRaw) valBattRaw.textContent = st.battery_raw != null ? `(raw ${st.battery_raw})` : '';
-      battBar.style.width = Math.max(0, Math.min(100, st.battery_percent)) + '%';
-      battBar.style.background = st.battery_percent <= 20 ? 'var(--red)' : st.battery_percent <= 40 ? 'var(--amber)' : 'var(--green)';
-    } else {
-      valBatt.textContent = 'N/A';
-      if(valBattRaw) valBattRaw.textContent = '(0xB0/0xB7 pending)';
-      battBar.style.width = '0%';
+    // Gradient fill under the curve
+    if (curvePath.length > 0) {
+      const grad = ctx.createLinearGradient(0, 0, 0, h);
+      grad.addColorStop(0, 'rgba(208, 188, 255, 0.28)');
+      grad.addColorStop(1, 'rgba(208, 188, 255, 0.0)');
+
+      ctx.beginPath();
+      ctx.moveTo(curvePath[0].x, midY);
+      curvePath.forEach(pt => ctx.lineTo(pt.x, pt.y));
+      ctx.lineTo(curvePath[curvePath.length - 1].x, midY);
+      ctx.closePath();
+      ctx.fillStyle = grad;
+      ctx.fill();
     }
 
-    // Charging
-    const valCharging = document.getElementById('val-charging');
-    const chargingMap = { charging: 'Charging', charged: 'Charged (100%)', not_charging: 'Discharging', unknown: 'Standby' };
-    valCharging.textContent = chargingMap[st.charging_state] || st.charging_state || 'Standby';
-    valCharging.style.color = st.charging_state === 'charging' ? 'var(--amber)' : st.charging_state === 'charged' ? 'var(--green)' : 'var(--text-main)';
-    const chSub = document.getElementById('val-charging-sub');
-    if(chSub) chSub.textContent = st.charging_state ? ('State: ' + st.charging_state) : 'USB-C Power Management';
-
-    // Wireless Link
-    const valWireless = document.getElementById('val-wireless');
-    const valPid = document.getElementById('val-pid');
-    const wState = (st.wireless_state || 'disconnected').toUpperCase();
-    valWireless.textContent = wState;
-    valWireless.style.color = st.wireless_connected ? 'var(--green)' : 'var(--text-muted)';
-    valPid.textContent = st.product_id ? `VID 0x1038 · PID ${st.product_id}` : 'VID 0x1038';
-
-    // Mic Mute
-    const valMic = document.getElementById('val-mic-mute');
-    if(st.mic_muted === true){
-      valMic.textContent = 'MUTED';
-      valMic.style.color = 'var(--red)';
-    } else if(st.mic_muted === false){
-      valMic.textContent = 'ACTIVE';
-      valMic.style.color = 'var(--green)';
-    } else {
-      valMic.textContent = 'Unknown';
-      valMic.style.color = 'var(--text-muted)';
-    }
-
-    // ChatMix
-    if(st.chatmix){
-      updateChatmixUI(st.chatmix.game, st.chatmix.chat);
-    }
-
-    // Active Profile
-    if(st.active_profile){
-      activeProfileName = st.active_profile;
-      document.getElementById('active-eq-badge').textContent = 'Active: ' + activeProfileName;
-    }
-
-    // EQ Bands
-    if(st.eq && Array.isArray(st.eq.bands) && st.eq.bands.length === 10 && !isDraggingSlider){
-      currentBands = st.eq.bands.map((b, i) => ({
-        frequency_hz: b.frequency_hz || EQ_FREQS[i],
-        gain_db: Number(b.gain_db || 0),
-        q_factor: Number(b.q_factor || 1.414),
-        filter_type: b.filter_type || 'peaking'
-      }));
-      updateEqUiFromState();
-    }
-
-    // Settings
-    if(st.settings){
-      const s = st.settings;
-      if(typeof s.sidetone_level === 'number'){
-        const lvl = s.sidetone_enabled ? s.sidetone_level : 0;
-        document.querySelectorAll('#seg-sidetone .seg-btn').forEach((b, i) => b.classList.toggle('active', i === lvl));
-        const labels = ['Off', 'Low', 'Medium', 'High'];
-        document.getElementById('sidetone-label').textContent = labels[lvl] || 'Off';
-      }
-      if(typeof s.mic_gain === 'number'){
-        document.getElementById('rng-mic-gain').value = String(s.mic_gain);
-        window.updateMicGain(s.mic_gain);
-      }
-      if(typeof s.mic_mute_led === 'number'){
-        document.querySelectorAll('#seg-mute-led .seg-btn').forEach((b, i) => b.classList.toggle('active', i === s.mic_mute_led));
-      }
-      if(typeof s.auto_off_minutes === 'number'){
-        const valMap = [0, 15, 30, 60, 120];
-        const idx = valMap.indexOf(s.auto_off_minutes);
-        if(idx !== -1){
-          document.getElementById('rng-inactivity').value = String(idx);
-          updateAutoOffLabel(idx);
-        }
-      }
-      if(typeof s.bt_auto_power_on === 'boolean'){
-        const chk = document.getElementById('chk-bt-power');
-        if(chk) chk.checked = s.bt_auto_power_on;
-        document.getElementById('lbl-bt-power').textContent = s.bt_auto_power_on ? 'Enabled' : 'Disabled';
-      }
-      if(s.bt_call_attenuation){
-        document.querySelectorAll('#seg-bt-call .seg-btn').forEach(b => {
-          b.classList.toggle('active', b.getAttribute('onclick').includes(s.bt_call_attenuation));
-        });
-      }
-    }
-
-    // Last Updated
-    if(st.last_updated_ms){
-      const dt = new Date(st.last_updated_ms);
-      const lu = document.getElementById('last-updated-label');
-      if(lu) lu.textContent = 'Updated ' + dt.toLocaleTimeString();
-    }
-
-    // Raw Telemetry JSON
-    document.getElementById('raw-telemetry').textContent = JSON.stringify(st, null, 2);
-  }
-
-  // Headset Settings Handlers
-  window.updateMicGain = function(v){
-    document.getElementById('lbl-mic-gain').textContent = v + ' / 15 (' + Math.round((v / 15) * 100) + '%)';
-  };
-
-  window.patchMicGain = function(v){
-    fetch('/api/settings', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ mic_gain: Number(v) })
-    }).then(r => r.json()).then(d => {
-      if(d.ok) showToast('Mic Gain set to ' + v);
-    }).catch(e => showToast('Mic Gain error: ' + e.message, true));
-  };
-
-  window.patchMicLed = function(level){
-    document.querySelectorAll('#seg-mute-led .seg-btn').forEach((b, i) => b.classList.toggle('active', i === level));
-    fetch('/api/settings', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ mic_mute_led: Number(level) })
-    }).then(r => r.json()).then(d => {
-      if(d.ok) showToast('Mic LED set to ' + ['Off', 'Low', 'Med', 'High'][level]);
-    }).catch(e => showToast('LED error: ' + e.message, true));
-  };
-
-  window.updateAutoOffLabel = function(idx){
-    const labels = ["Disabled (Never)", "15 minutes", "30 minutes", "60 minutes", "120 minutes"];
-    document.getElementById('lbl-inactivity').textContent = labels[idx] || "30 minutes";
-  };
-
-  window.patchAutoOffFromSlider = function(idx){
-    const minutes = [0, 15, 30, 60, 120][idx] ?? 30;
-    fetch('/api/settings', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ auto_off_minutes: minutes })
-    }).then(r => r.json()).then(d => {
-      if(d.ok) showToast('Auto-Off: ' + (minutes === 0 ? 'Disabled' : minutes + 'm'));
-    }).catch(e => showToast('Auto-Off error: ' + e.message, true));
-  };
-
-  window.patchVolumeLimiter = function(enabled){
-    document.getElementById('lbl-volume-limiter').textContent = enabled ? 'Enabled (Capped)' : 'Disabled (Full Output)';
-    fetch('/api/settings', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ volume_limiter: enabled })
-    }).then(r => r.json()).then(d => {
-      if(d.ok) showToast('Volume Limiter ' + (enabled ? 'Enabled' : 'Disabled'));
-    }).catch(e => showToast('Limiter error: ' + e.message, true));
-  };
-
-  window.patchBtPower = function(enabled){
-    document.getElementById('lbl-bt-power').textContent = enabled ? 'Enabled' : 'Disabled';
-    fetch('/api/settings', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ bt_auto_power_on: enabled })
-    }).then(r => r.json()).then(d => {
-      if(d.ok) showToast('BT Auto Power ' + (enabled ? 'Enabled' : 'Disabled'));
-    }).catch(e => showToast('BT error: ' + e.message, true));
-  };
-
-  window.patchBtCall = function(behavior){
-    document.querySelectorAll('#seg-bt-call .seg-btn').forEach(b => {
-      b.classList.toggle('active', b.getAttribute('onclick').includes(behavior));
+    // Primary Spline Line
+    ctx.beginPath();
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = '#D0BCFF';
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    curvePath.forEach((pt, i) => {
+      if (i === 0) ctx.moveTo(pt.x, pt.y);
+      else ctx.lineTo(pt.x, pt.y);
     });
-    fetch('/api/settings', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ bt_call_attenuation: behavior })
-    }).then(r => r.json()).then(d => {
-      if(d.ok) showToast('BT Call: ' + behavior);
-    }).catch(e => showToast('BT call error: ' + e.message, true));
-  };
+    ctx.stroke();
 
-  window.setChatmixBalance = function(v){
-    const balance = parseInt(v, 10) || 0;
+    // Band Control Point Circles
+    bandPoints.forEach(pt => {
+      ctx.beginPath();
+      ctx.arc(pt.x, pt.y, 4.5, 0, Math.PI * 2);
+      ctx.fillStyle = '#141218';
+      ctx.fill();
+      ctx.lineWidth = 2.5;
+      ctx.strokeStyle = '#D0BCFF';
+      ctx.stroke();
+    });
+  }
+
+  window.addEventListener('resize', drawEqCurve);
+
+  // --- ChatMix Crossfader Handling ---
+  window.onChatmixSliderInput = function(val) {
+    const balance = parseInt(val, 10) || 0;
     fetch('/api/chatmix', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -2187,153 +1389,301 @@ body {
     }).catch(_ => {});
   };
 
-  function updateChatmixUI(game, chat){
-    if(typeof game !== 'number') game = 100;
-    if(typeof chat !== 'number') chat = 100;
+  window.setQuickChatmix = function(val) {
+    const slider = document.getElementById('chatmix-slider');
+    if (slider) {
+      slider.value = String(val);
+      window.onChatmixSliderInput(val);
+    }
+  };
 
-    document.getElementById('val-game-vol').textContent = game + '%';
-    document.getElementById('val-chat-vol').textContent = chat + '%';
-    document.getElementById('bar-game-vol').style.width = game + '%';
-    document.getElementById('bar-chat-vol').style.width = chat + '%';
+  function updateChatmixUi(game, chat) {
+    if (typeof game !== 'number') game = 100;
+    if (typeof chat !== 'number') chat = 100;
+
+    document.getElementById('lbl-game-vol').textContent = game + '%';
+    document.getElementById('lbl-chat-vol').textContent = chat + '%';
 
     const diff = chat - game;
-    const angle = (diff / 100) * 125;
-    const needle = document.getElementById('chatmix-needle');
-    if(needle) needle.setAttribute('transform', `rotate(${angle.toFixed(1)} 60 60)`);
-
-    const biasBadge = document.getElementById('chatmix-bias-badge');
-    if(Math.abs(diff) <= 4){
-      biasBadge.textContent = 'Balanced';
-      biasBadge.className = 'badge ok';
-    } else if(diff < 0){
-      biasBadge.textContent = `Game Bias (+${Math.abs(diff)}%)`;
-      biasBadge.className = 'badge warn';
+    const pill = document.getElementById('pill-chatmix-bias');
+    if (Math.abs(diff) <= 4) {
+      pill.textContent = 'Dengeli (%100 / %100)';
+      pill.className = 'm3-pill connected';
+    } else if (diff < 0) {
+      pill.textContent = `🎮 Oyun Ağırlıklı (+${Math.abs(diff)}%)`;
+      pill.className = 'm3-pill primary';
     } else {
-      biasBadge.textContent = `Chat Bias (+${diff}%)`;
-      biasBadge.className = 'badge ok';
+      pill.textContent = `💬 Sohbet Ağırlıklı (+${diff}%)`;
+      pill.className = 'm3-pill primary';
     }
 
-    const headerText = document.getElementById('header-chatmix-text');
-    if(headerText) headerText.textContent = `Balance: ${game}% ╎ ${chat}%`;
-
-    const slider = document.getElementById('input-chatmix-balance');
-    if(slider && document.activeElement !== slider){
+    const slider = document.getElementById('chatmix-slider');
+    if (slider && document.activeElement !== slider) {
       slider.value = Math.round(chat - game);
     }
   }
 
-  window.setSidetone = function(l){
-    const labels = ['Off', 'Low', 'Medium', 'High'];
-    document.getElementById('sidetone-label').textContent = labels[l] || 'Off';
-    document.querySelectorAll('#seg-sidetone .seg-btn').forEach((b, i) => b.classList.toggle('active', i === l));
+  // --- Hardware Settings Controls ---
+  window.setSidetone = function(level) {
+    document.querySelectorAll('#seg-sidetone .m3-seg-btn').forEach((b, i) => {
+      b.classList.toggle('active', i === level);
+    });
     fetch('/api/sidetone', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ level: Number(l), enabled: l > 0 })
+      body: JSON.stringify({ level: Number(level), enabled: level > 0 })
     }).then(r => r.json()).then(d => {
-      if(d.ok) showToast('Sidetone set to ' + labels[l]);
-    }).catch(e => showToast('Sidetone error: ' + e.message, true));
+      if (d.ok) showSnackbar('Yan Ton seviyesi güncellendi: ' + ['Kapalı', 'Düşük', 'Orta', 'Yüksek'][level]);
+    }).catch(e => showSnackbar('Yan Ton hatası: ' + e.message));
   };
 
-  window.setPolling = function(sec){
-    document.querySelectorAll('#seg-polling .seg-btn').forEach(b => b.classList.remove('active'));
-    const pb = document.querySelector('#seg-polling .seg-btn[onclick*="setPolling(' + sec + ')"]');
-    if(pb) pb.classList.add('active');
-    document.getElementById('sync-badge-text').textContent = 'SYNC: ' + sec + 's';
-    startAutoPoll(sec * 1000);
+  window.onMicGainInput = function(val) {
+    document.getElementById('lbl-mic-gain').textContent = val + ' / 15';
   };
 
-  window.triggerSaveFlash = function(){
-    fetch('/api/save-flash', { method: 'POST' }).then(r => r.json()).then(d => {
-      showToast('Saved to hardware flash memory (0x09)');
-    }).catch(e => showToast('Flash error: ' + e.message, true));
+  window.patchMicGain = function(val) {
+    fetch('/api/settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mic_gain: Number(val) })
+    }).then(r => r.json()).then(d => {
+      if (d.ok) showSnackbar('Mikrofon kazancı ayarlandı: ' + val + ' / 15');
+    }).catch(e => showSnackbar('Hata: ' + e.message));
   };
 
-  window.copyRawJson = function(){
-    const text = document.getElementById('raw-telemetry').textContent;
+  window.patchMicLed = function(level) {
+    document.querySelectorAll('#seg-mute-led .m3-seg-btn').forEach((b, i) => {
+      b.classList.toggle('active', i === level);
+    });
+    fetch('/api/settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mic_mute_led: Number(level) })
+    }).then(r => r.json()).then(d => {
+      if (d.ok) showSnackbar('Mikrofon LED parlaklığı: ' + ['Kapalı', 'Düşük', 'Orta', 'Yüksek'][level]);
+    }).catch(e => showSnackbar('Hata: ' + e.message));
+  };
+
+  window.patchVolumeLimiter = function(enabled) {
+    fetch('/api/settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ volume_limiter: enabled })
+    }).then(r => r.json()).then(d => {
+      if (d.ok) showSnackbar('EU Ses Sınırlayıcı ' + (enabled ? 'Aktif' : 'Devre Dışı'));
+    }).catch(e => showSnackbar('Hata: ' + e.message));
+  };
+
+  window.patchAutoOffMinutes = function(minutes) {
+    const validMinutes = [5, 15, 30, 0];
+    document.querySelectorAll('#seg-auto-off .m3-seg-btn').forEach((b, i) => {
+      b.classList.toggle('active', validMinutes[i] === minutes);
+    });
+    fetch('/api/settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ auto_off_minutes: minutes })
+    }).then(r => r.json()).then(d => {
+      if (d.ok) showSnackbar('Otomatik kapanma: ' + (minutes === 0 ? 'Asla' : minutes + ' dakika'));
+    }).catch(e => showSnackbar('Hata: ' + e.message));
+  };
+
+  window.patchBtPower = function(enabled) {
+    fetch('/api/settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ bt_auto_power_on: enabled })
+    }).then(r => r.json()).then(d => {
+      if (d.ok) showSnackbar('Bluetooth Açılış ' + (enabled ? 'Etkinleştirildi' : 'Kapatıldı'));
+    }).catch(e => showSnackbar('Hata: ' + e.message));
+  };
+
+  window.patchBtCall = function(behavior) {
+    const list = ['do_nothing', 'attenuate_12db', 'mute_game'];
+    document.querySelectorAll('#seg-bt-call .m3-seg-btn').forEach((b, i) => {
+      b.classList.toggle('active', list[i] === behavior);
+    });
+    fetch('/api/settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ bt_call_attenuation: behavior })
+    }).then(r => r.json()).then(d => {
+      if (d.ok) showSnackbar('BT Çağrı davranışı güncellendi');
+    }).catch(e => showSnackbar('Hata: ' + e.message));
+  };
+
+  window.triggerSaveFlash = function() {
+    fetch('/api/save-flash', { method: 'POST' })
+      .then(r => r.json())
+      .then(d => {
+        showSnackbar('Kulaklık kalıcı flaş hafızasına kaydedildi (0x09)');
+      })
+      .catch(e => showSnackbar('Flaş kaydetme hatası: ' + e.message));
+  };
+
+  window.copyRawJson = function() {
+    const text = document.getElementById('raw-telemetry-json').textContent;
     navigator.clipboard.writeText(text).then(() => {
-      showToast('Telemetry JSON copied to clipboard');
-    }).catch(() => {
-      showToast('Failed to copy to clipboard', true);
+      showSnackbar('Telemetri JSON kopyalandı');
     });
   };
 
-  // SSE Live Connection
-  function connectSse(){
-    const sseBadge = document.getElementById('sse-badge');
-    const sseText = document.getElementById('sse-badge-text');
+  // --- Telemetry Snapshot Renderer ---
+  function applyStatus(st) {
+    if (!st || typeof st !== 'object') return;
+
+    // Wireless connection pill
+    const pillWireless = document.getElementById('pill-wireless');
+    const txtWireless = document.getElementById('txt-wireless');
+    if (st.usb_connected) {
+      pillWireless.className = 'm3-pill connected';
+      txtWireless.textContent = `2.4GHz RF Bağlı (${st.product_id || '0x1038'})`;
+    } else {
+      pillWireless.className = 'm3-pill warning';
+      txtWireless.textContent = 'Bağlantı Bekleniyor';
+    }
+
+    // Battery pill
+    const pillBattery = document.getElementById('pill-battery');
+    const txtBattery = document.getElementById('txt-battery');
+    const isCharging = st.charging_state === 'charging';
+    if (typeof st.battery_percent === 'number') {
+      txtBattery.textContent = (isCharging ? '⚡ Şarj Oluyor: %' : 'Pil: %') + st.battery_percent;
+      if (st.battery_percent <= 15) {
+        pillBattery.className = 'm3-pill warning';
+      } else if (isCharging) {
+        pillBattery.className = 'm3-pill primary';
+      } else {
+        pillBattery.className = 'm3-pill';
+      }
+    } else {
+      txtBattery.textContent = 'Pil: Bekleniyor';
+    }
+
+    // ChatMix
+    if (st.chatmix) {
+      updateChatmixUi(st.chatmix.game, st.chatmix.chat);
+    }
+
+    // Settings
+    if (st.settings) {
+      const s = st.settings;
+      if (typeof s.sidetone_level === 'number') {
+        const lvl = s.sidetone_enabled ? s.sidetone_level : 0;
+        document.querySelectorAll('#seg-sidetone .m3-seg-btn').forEach((b, i) => b.classList.toggle('active', i === lvl));
+      }
+      if (typeof s.mic_gain === 'number') {
+        document.getElementById('rng-mic-gain').value = String(s.mic_gain);
+        document.getElementById('lbl-mic-gain').textContent = s.mic_gain + ' / 15';
+      }
+      if (typeof s.mic_mute_led === 'number') {
+        document.querySelectorAll('#seg-mute-led .m3-seg-btn').forEach((b, i) => b.classList.toggle('active', i === s.mic_mute_led));
+      }
+      if (typeof s.auto_off_minutes === 'number') {
+        const validMinutes = [5, 15, 30, 0];
+        document.querySelectorAll('#seg-auto-off .m3-seg-btn').forEach((b, i) => b.classList.toggle('active', validMinutes[i] === s.auto_off_minutes));
+      }
+      if (typeof s.volume_limiter === 'boolean') {
+        document.getElementById('chk-volume-limiter').checked = s.volume_limiter;
+      }
+      if (typeof s.bt_auto_power_on === 'boolean') {
+        document.getElementById('chk-bt-power').checked = s.bt_auto_power_on;
+      }
+      if (s.bt_call_attenuation) {
+        const list = ['do_nothing', 'attenuate_12db', 'mute_game'];
+        document.querySelectorAll('#seg-bt-call .m3-seg-btn').forEach((b, i) => {
+          b.classList.toggle('active', list[i] === s.bt_call_attenuation);
+        });
+      }
+    }
+
+    // EQ bands from state
+    if (st.eq && Array.isArray(st.eq.bands) && st.eq.bands.length === 10 && !isDraggingSlider) {
+      currentBands = st.eq.bands.map((b, i) => ({
+        frequency_hz: b.frequency_hz || EQ_FREQS[i],
+        gain_db: Number(b.gain_db || 0),
+        q_factor: Number(b.q_factor || 1.414),
+        filter_type: b.filter_type || "peaking"
+      }));
+      updateEqReadouts();
+      drawEqCurve();
+    }
+
+    // Diagnostics Card
+    document.getElementById('diag-battery').textContent = (typeof st.battery_percent === 'number') ? `${st.battery_percent}% (ham: ${st.battery_raw ?? '--'})` : 'N/A';
+    document.getElementById('diag-charging').textContent = st.charging_state || 'Standby';
+    document.getElementById('diag-wireless').textContent = (st.wireless_state || 'disconnected').toUpperCase();
+    document.getElementById('diag-mic').textContent = st.mic_muted === true ? 'Sessize Alındı (Muted)' : (st.mic_muted === false ? 'Açık (Active)' : 'Bilinmiyor');
+    document.getElementById('raw-telemetry-json').textContent = JSON.stringify(st, null, 2);
+
+    if (st.last_updated_ms) {
+      document.getElementById('txt-last-update').textContent = new Date(st.last_updated_ms).toLocaleTimeString();
+    }
+  }
+
+  // --- SSE Connection ---
+  function connectSse() {
+    const pill = document.getElementById('pill-sse');
+    const txt = document.getElementById('txt-sse');
     try {
       const es = new EventSource('/api/events');
       es.onopen = () => {
-        sseBadge.className = 'badge live';
-        sseText.textContent = 'LIVE SSE';
+        pill.className = 'm3-pill connected';
+        txt.textContent = 'Canlı SSE';
       };
       const handleEvent = (evt) => {
         try {
-          const p = JSON.parse(evt.data);
-          applyStatusSnapshot(p);
-        } catch(_){}
+          const data = JSON.parse(evt.data);
+          applyStatus(data);
+        } catch(_) {}
       };
-      ['connected', 'disconnected', 'status', 'telemetry', 'chatmix', 'eq', 'sidetone', 'settings', 'flash_saved', 'message'].forEach(n => es.addEventListener(n, handleEvent));
+      ['connected', 'disconnected', 'status', 'telemetry', 'chatmix', 'eq', 'sidetone', 'settings', 'flash_saved', 'message'].forEach(evName => {
+        es.addEventListener(evName, handleEvent);
+      });
       es.onerror = () => {
-        sseBadge.className = 'badge warn';
-        sseText.textContent = 'SSE Reconnecting...';
+        pill.className = 'm3-pill warning';
+        txt.textContent = 'SSE Yeniden Bağlanıyor...';
       };
-    } catch(e){
-      sseBadge.className = 'badge err';
-      sseText.textContent = 'SSE Error';
+    } catch(e) {
+      pill.className = 'm3-pill warning';
+      txt.textContent = 'SSE Kapalı';
     }
   }
 
-  // Polling Heartbeat
-  let pollTimer = null;
-  function startAutoPoll(intervalMs = 2000){
-    if(pollTimer) clearInterval(pollTimer);
-    pollTimer = setInterval(async () => {
+  // Polling Heartbeat fallback
+  function startPolling() {
+    setInterval(async () => {
       try {
         const res = await fetch('/api/status?refresh=1');
-        if(res.ok){
-          const d = await res.json();
-          applyStatusSnapshot(d);
+        if (res.ok) {
+          const data = await res.json();
+          applyStatus(data);
         }
-      } catch(e){}
-    }, intervalMs);
+      } catch(_) {}
+    }, 2000);
   }
 
-  document.addEventListener('visibilitychange', () => {
-    if(document.visibilityState === 'visible'){
-      fetch('/api/status').then(r => r.json()).then(d => applyStatusSnapshot(d)).catch(_ => {});
-    }
-  });
-
-  async function fetchInitialData(){
-    try {
-      const [statusRes, presetsRes] = await Promise.all([fetch('/api/status'), fetch('/api/presets')]);
-      if(presetsRes.ok){
-        const pData = await presetsRes.json();
-        if(Array.isArray(pData.presets)) serverPresets = pData.presets;
-        if(pData.active_profile){
-          activeProfileName = pData.active_profile;
-          document.getElementById('active-eq-badge').textContent = 'Active: ' + activeProfileName;
-        }
-      }
-      if(statusRes.ok){
-        const sData = await statusRes.json();
-        applyStatusSnapshot(sData);
-      }
-      renderPresetsGrid();
-    } catch(e){
-      console.warn('Initial fetch error:', e);
-    }
-  }
-
-  window.onload = () => {
+  // Initial Fetch
+  async function init() {
+    initPresetChips();
     initEqSliders();
-    renderPresetsGrid();
-    fetchInitialData();
+    drawEqCurve();
+
+    try {
+      const res = await fetch('/api/status');
+      if (res.ok) {
+        const data = await res.json();
+        applyStatus(data);
+      }
+    } catch(e) {
+      console.warn("Init fetch warning:", e);
+    }
+
     connectSse();
-    startAutoPoll(2000);
-  };
+    startPolling();
+  }
+
+  window.addEventListener('DOMContentLoaded', init);
 })();
 </script>
 </body>

@@ -52,6 +52,105 @@ impl VolumeState {
     }
 }
 
+/// Tracks battery level and charging state to deliver non-blocking desktop notifications
+/// via `/usr/bin/notify-send` when thresholds (20%, 10%, 5%) or charging events occur.
+#[derive(Debug, Default, PartialEq, Eq)]
+pub(crate) struct BatteryNotificationTracker {
+    pub(crate) last_battery_alert_threshold: Option<u8>,
+    pub(crate) last_charging_state: Option<bool>,
+}
+
+impl BatteryNotificationTracker {
+    pub(crate) fn check_and_notify(&mut self, battery_percent: Option<u8>, is_charging: bool) {
+        // When charging begins (is_charging transitions from false to true)
+        if is_charging && self.last_charging_state == Some(false) {
+            spawn_desktop_notification(
+                "low",
+                "battery-charging",
+                "Arctis Nova 7",
+                "Kulaklık şarj ediliyor",
+            );
+            // Reset the threshold when charging starts
+            self.last_battery_alert_threshold = None;
+        }
+        self.last_charging_state = Some(is_charging);
+
+        if let Some(percent) = battery_percent {
+            // Reset the threshold when battery goes above 25% or when charging starts,
+            // preventing notification loops.
+            if percent > 25 {
+                self.last_battery_alert_threshold = None;
+            } else if !is_charging {
+                // Determine lowest matching threshold: <= 5, <= 10, <= 20
+                let current_threshold = if percent <= 5 {
+                    Some(5)
+                } else if percent <= 10 {
+                    Some(10)
+                } else if percent <= 20 {
+                    Some(20)
+                } else {
+                    None
+                };
+
+                if let Some(threshold) = current_threshold {
+                    let should_alert = match self.last_battery_alert_threshold {
+                        None => true,
+                        Some(last) => threshold < last,
+                    };
+
+                    if should_alert {
+                        self.last_battery_alert_threshold = Some(threshold);
+                        match threshold {
+                            5 => spawn_desktop_notification(
+                                "critical",
+                                "battery-empty",
+                                "Arctis Nova 7",
+                                &format!("Pil tükenmek üzere (%{}) - Lütfen şarja takın", percent),
+                            ),
+                            10 => spawn_desktop_notification(
+                                "normal",
+                                "battery-caution",
+                                "Arctis Nova 7",
+                                &format!("Pil seviyesi kritik (%{})", percent),
+                            ),
+                            20 => spawn_desktop_notification(
+                                "normal",
+                                "battery-caution",
+                                "Arctis Nova 7",
+                                &format!("Pil seviyesi düşük (%{})", percent),
+                            ),
+                            _ => {}
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/// Spawns a desktop notification asynchronously and detached via `notify-send`.
+/// Guaranteed never to block the audio or USB interrupt threads.
+pub(crate) fn spawn_desktop_notification(urgency: &str, icon: &str, title: &str, body: &str) {
+    let notify_bin = if std::path::Path::new("/usr/bin/notify-send").exists() {
+        "/usr/bin/notify-send"
+    } else {
+        "notify-send"
+    };
+
+    match std::process::Command::new(notify_bin)
+        .arg("-u")
+        .arg(urgency)
+        .arg("-i")
+        .arg(icon)
+        .arg(title)
+        .arg(body)
+        .spawn()
+    {
+        Ok(_) => debug!("Spawned desktop notification [{}]: {} - {}", urgency, title, body),
+        Err(e) => debug!("Failed to spawn desktop notification ({}): {}", notify_bin, e),
+    }
+}
+
 pub(crate) struct ArctisController {
     original_default_sink: String,
     running: Arc<AtomicBool>,
@@ -344,11 +443,13 @@ impl ArctisController {
         let mut consecutive_errors = 0u32;
         let mut volume_state = VolumeState::default();
         let mut telemetry = HeadsetTelemetry::default();
+        let mut battery_tracker = BatteryNotificationTracker::default();
         let is_percentage_device = is_percentage_battery_device(product_id);
         let mut last_status_poll = Instant::now();
 
         if let Ok(Some(event)) = crate::usb::hidapi_request_status() {
             let changed = telemetry.apply_event(&event);
+            battery_tracker.check_and_notify(telemetry.battery_percent, telemetry.charging.is_charging());
             let event_name = match event {
                 TelemetryEvent::ChatMix { .. } => "chatmix",
                 _ => "telemetry",
@@ -377,6 +478,7 @@ impl ArctisController {
             {
                 if let Ok(Some(event)) = crate::usb::hidapi_request_status() {
                     let changed = telemetry.apply_event(&event);
+                    battery_tracker.check_and_notify(telemetry.battery_percent, telemetry.charging.is_charging());
                     let event_name = match event {
                         TelemetryEvent::ChatMix { .. } => "chatmix",
                         _ => "telemetry",
@@ -433,6 +535,7 @@ impl ArctisController {
                         }
 
                         let changed = telemetry.apply_event(&event);
+                        battery_tracker.check_and_notify(telemetry.battery_percent, telemetry.charging.is_charging());
                         let event_name = match event {
                             TelemetryEvent::ChatMix { .. } => "chatmix",
                             TelemetryEvent::GeneralStatus(_) => "telemetry",
@@ -586,5 +689,75 @@ mod tests {
         state.record_chat(85, true);
         assert!(!state.should_apply_chat(85));
         assert!(state.should_apply_game(70));
+    }
+
+    #[test]
+    fn test_battery_notification_thresholds() {
+        let mut tracker = BatteryNotificationTracker::default();
+
+        // High battery, discharging
+        tracker.check_and_notify(Some(100), false);
+        assert_eq!(tracker.last_battery_alert_threshold, None);
+        assert_eq!(tracker.last_charging_state, Some(false));
+
+        // Drops to 21% (above 20% threshold)
+        tracker.check_and_notify(Some(21), false);
+        assert_eq!(tracker.last_battery_alert_threshold, None);
+
+        // Drops to 20% (triggers 20% alert)
+        tracker.check_and_notify(Some(20), false);
+        assert_eq!(tracker.last_battery_alert_threshold, Some(20));
+
+        // Still at 20% (does not re-trigger)
+        tracker.check_and_notify(Some(20), false);
+        assert_eq!(tracker.last_battery_alert_threshold, Some(20));
+
+        // Drops to 15% (still in <= 20 threshold, does not re-alert)
+        tracker.check_and_notify(Some(15), false);
+        assert_eq!(tracker.last_battery_alert_threshold, Some(20));
+
+        // Drops to 10% (triggers 10% alert)
+        tracker.check_and_notify(Some(10), false);
+        assert_eq!(tracker.last_battery_alert_threshold, Some(10));
+
+        // Drops to 8% (still in <= 10 threshold)
+        tracker.check_and_notify(Some(8), false);
+        assert_eq!(tracker.last_battery_alert_threshold, Some(10));
+
+        // Drops to 5% (triggers critical <= 5% alert)
+        tracker.check_and_notify(Some(5), false);
+        assert_eq!(tracker.last_battery_alert_threshold, Some(5));
+
+        // Drops to 1% (already at lowest 5% threshold)
+        tracker.check_and_notify(Some(1), false);
+        assert_eq!(tracker.last_battery_alert_threshold, Some(5));
+
+        // Battery recharged above 25% (resets threshold to None)
+        tracker.check_and_notify(Some(26), false);
+        assert_eq!(tracker.last_battery_alert_threshold, None);
+    }
+
+    #[test]
+    fn test_battery_notification_charging_state() {
+        let mut tracker = BatteryNotificationTracker::default();
+
+        // Initialized as discharging with low battery (15%)
+        tracker.check_and_notify(Some(15), false);
+        assert_eq!(tracker.last_battery_alert_threshold, Some(20));
+        assert_eq!(tracker.last_charging_state, Some(false));
+
+        // User plugs in charger -> transitions from false to true
+        tracker.check_and_notify(Some(15), true);
+        assert_eq!(tracker.last_battery_alert_threshold, None);
+        assert_eq!(tracker.last_charging_state, Some(true));
+
+        // While charging, low battery alerts are suppressed even if <= 5%
+        tracker.check_and_notify(Some(4), true);
+        assert_eq!(tracker.last_battery_alert_threshold, None);
+
+        // Charger unplugged -> transitions from true to false
+        tracker.check_and_notify(Some(4), false);
+        assert_eq!(tracker.last_battery_alert_threshold, Some(5));
+        assert_eq!(tracker.last_charging_state, Some(false));
     }
 }

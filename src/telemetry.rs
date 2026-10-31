@@ -87,6 +87,10 @@ impl ChargingState {
             other => Self::Unknown(other),
         }
     }
+
+    pub fn is_charging(&self) -> bool {
+        matches!(self, Self::Charging | Self::Charged)
+    }
 }
 
 impl fmt::Display for ChargingState {

@@ -7,7 +7,7 @@ It creates two PipeWire virtual sinks (`Arctis_Game` and `Arctis_Chat`), links t
 This repository contains:
 - Rust implementation of the PipeWire ChatMix daemon, USB HID / `hidraw` hardware DSP controller, XDG configuration manager, and embedded web server (`src/`)
 - Convenience installer/uninstaller script (`install.sh`) supporting per-user or system-wide systemd services, XDG config initialization, and udev rules
-- Comprehensive `udev` rule (`config/99-arctis.rules`) covering all 20 RX & TX Product IDs with `uaccess` and USB autosuspend protection (`power/control="on"`)
+- Comprehensive `udev` rule (`config/99-arctis.rules`) covering all 23 RX & TX Product IDs with `uaccess` and USB autosuspend protection (`power/control="on"`)
 - Arch Linux AUR packaging (`aur/arctis-nova-7-chatmix` and `aur/arctis-nova-7-chatmix-bin`)
 
 ---
@@ -40,7 +40,10 @@ Supported environment:
 | Arctis Nova 7X Gen 2 (`brisket_xbox_rx`) | Headset / RX | `0x229c` | Direct Percentage (`0–100%`) |
 | Arctis Nova 7X v2 (Variant 2) | Wireless Dongle / TX | `0x229e` | Direct Percentage (`0–100%`) |
 | Arctis Nova 7 Gen 2 Upgrade (Jan 2026) | Wireless Dongle / TX | `0x22a1` | Direct Percentage (`0–100%`) |
+| Arctis Nova 7X | Headset / RX | `0x22a4` | Discrete (`0–4` → `0–100%`) |
+| Arctis Nova 7X | Wireless Dongle / TX | `0x22a5` | Direct Percentage (`0–100%`) |
 | Arctis Nova 7 Diablo IV Edition (Post-update) | Wireless Dongle / TX | `0x22a9` | Direct Percentage (`0–100%`) |
+| Arctis Nova 7X v2 | Wireless Dongle / TX | `0x22ad` | Direct Percentage (`0–100%`) |
 
 ---
 

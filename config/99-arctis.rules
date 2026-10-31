@@ -111,3 +111,18 @@ ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="1038", ATTR{idProduct}=="228a"
 ATTRS{idVendor}=="1038", ATTRS{idProduct}=="229c", MODE="0660", GROUP="audio", TAG+="uaccess"
 KERNEL=="hidraw*", ATTRS{idVendor}=="1038", ATTRS{idProduct}=="229c", MODE="0660", GROUP="audio", TAG+="uaccess"
 ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="1038", ATTR{idProduct}=="229c", TEST=="power/control", ATTR{power/control}="on"
+
+# Arctis Nova 7X (0x22a4)
+ATTRS{idVendor}=="1038", ATTRS{idProduct}=="22a4", MODE="0660", GROUP="audio", TAG+="uaccess"
+KERNEL=="hidraw*", ATTRS{idVendor}=="1038", ATTRS{idProduct}=="22a4", MODE="0660", GROUP="audio", TAG+="uaccess"
+ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="1038", ATTR{idProduct}=="22a4", TEST=="power/control", ATTR{power/control}="on"
+
+# Arctis Nova 7X (0x22a5)
+ATTRS{idVendor}=="1038", ATTRS{idProduct}=="22a5", MODE="0660", GROUP="audio", TAG+="uaccess"
+KERNEL=="hidraw*", ATTRS{idVendor}=="1038", ATTRS{idProduct}=="22a5", MODE="0660", GROUP="audio", TAG+="uaccess"
+ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="1038", ATTR{idProduct}=="22a5", TEST=="power/control", ATTR{power/control}="on"
+
+# Arctis Nova 7X v2 (0x22ad)
+ATTRS{idVendor}=="1038", ATTRS{idProduct}=="22ad", MODE="0660", GROUP="audio", TAG+="uaccess"
+KERNEL=="hidraw*", ATTRS{idVendor}=="1038", ATTRS{idProduct}=="22ad", MODE="0660", GROUP="audio", TAG+="uaccess"
+ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="1038", ATTR{idProduct}=="22ad", TEST=="power/control", ATTR{power/control}="on"
