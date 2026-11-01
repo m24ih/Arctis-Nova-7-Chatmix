@@ -157,6 +157,10 @@ pub(crate) struct ArctisController {
     sinks_created: Arc<AtomicBool>,
     config_manager: ConfigManager,
     config: AppConfig,
+    active_eq_24g: Option<ParametricEqProfile>,
+    active_eq_bt: Option<ParametricEqProfile>,
+    active_eq_mic: Option<ParametricEqProfile>,
+    #[allow(dead_code)]
     active_eq: Option<ParametricEqProfile>,
     worker: DeviceWorker,
     worker_handle: DeviceWorkerHandle,
@@ -182,10 +186,10 @@ impl ArctisController {
             AppConfig::default()
         });
 
-        let active_eq = match config_manager.load_profile(&config.active_profile) {
+        let active_eq_24g = match config_manager.load_profile(&config.active_profile_24g) {
             Ok(profile) => {
                 info!(
-                    "Loaded active 10-band EQ profile '{}' from {}",
+                    "Loaded active 2.4G 10-band EQ profile '{}' from {}",
                     profile.name,
                     config_manager.base_dir().display()
                 );
@@ -193,12 +197,42 @@ impl ArctisController {
             }
             Err(e) => {
                 warn!(
-                    "Failed to load EQ profile '{}': {}. Falling back to Harman preset.",
-                    config.active_profile, e
+                    "Failed to load 2.4G EQ profile '{}': {}. Falling back to Flat preset.",
+                    config.active_profile_24g, e
+                );
+                Some(ParametricEqProfile::flat())
+            }
+        };
+
+        let active_eq_bt = match config_manager.load_profile(&config.active_profile_bt) {
+            Ok(profile) => {
+                info!("Loaded active Bluetooth EQ profile '{}'", profile.name);
+                Some(profile)
+            }
+            Err(e) => {
+                warn!(
+                    "Failed to load Bluetooth EQ profile '{}': {}. Falling back to Harman preset.",
+                    config.active_profile_bt, e
                 );
                 Some(ParametricEqProfile::harman())
             }
         };
+
+        let active_eq_mic = match config_manager.load_profile(&config.active_profile_mic) {
+            Ok(profile) => {
+                info!("Loaded active Microphone EQ profile '{}'", profile.name);
+                Some(profile)
+            }
+            Err(e) => {
+                warn!(
+                    "Failed to load Microphone EQ profile '{}': {}. Falling back to Flat preset.",
+                    config.active_profile_mic, e
+                );
+                Some(ParametricEqProfile::flat())
+            }
+        };
+
+        let active_eq = active_eq_24g.clone();
 
         let (worker, worker_handle) =
             DeviceWorker::create(config_manager.clone(), config.clone());
@@ -217,6 +251,9 @@ impl ArctisController {
             sinks_created: Arc::new(AtomicBool::new(false)),
             config_manager,
             config,
+            active_eq_24g,
+            active_eq_bt,
+            active_eq_mic,
             active_eq,
             worker,
             worker_handle,
@@ -342,11 +379,22 @@ impl ArctisController {
                 .config_manager
                 .load_config()
                 .unwrap_or_else(|_| self.config.clone());
-            let latest_eq = self
+            let latest_eq_24g = self
                 .config_manager
-                .load_profile(&latest_cfg.active_profile)
+                .load_profile(&latest_cfg.active_profile_24g)
                 .ok()
-                .or_else(|| self.active_eq.clone());
+                .or_else(|| self.active_eq_24g.clone());
+            let latest_eq_bt = self
+                .config_manager
+                .load_profile(&latest_cfg.active_profile_bt)
+                .ok()
+                .or_else(|| self.active_eq_bt.clone());
+            let latest_eq_mic = self
+                .config_manager
+                .load_profile(&latest_cfg.active_profile_mic)
+                .ok()
+                .or_else(|| self.active_eq_mic.clone());
+            let latest_eq = latest_eq_24g.clone();
 
             match usb_find_and_open(&usb_ctx, Some((&latest_cfg, latest_eq.as_ref()))) {
                 Ok((mut handle, endpoint, interface_num, product_id)) => {
@@ -367,8 +415,15 @@ impl ArctisController {
                         st.usb_connected = true;
                         st.product_id = Some(product_id);
                         st.config = latest_cfg.clone();
-                        if let Some(ref eq) = latest_eq {
+                        if let Some(ref eq) = latest_eq_24g {
+                            st.active_eq_24g = eq.clone();
                             st.active_eq = eq.clone();
+                        }
+                        if let Some(ref eq) = latest_eq_bt {
+                            st.active_eq_bt = eq.clone();
+                        }
+                        if let Some(ref eq) = latest_eq_mic {
+                            st.active_eq_mic = eq.clone();
                         }
                         st.available_presets = load_all_presets(&self.config_manager);
                         st.touch();
@@ -595,6 +650,31 @@ impl ArctisController {
     fn sync_telemetry_to_shared_state(&self, telemetry: &HeadsetTelemetry, sse_event_name: &str) {
         if let Ok(mut st) = self.worker_handle.state.write() {
             st.telemetry = telemetry.clone();
+            if let Some(lvl) = telemetry.sidetone_level {
+                st.config.hardware.sidetone_level = lvl;
+                st.config.hardware.sidetone_enabled = lvl > 0;
+            }
+            if let Some(gain) = telemetry.mic_gain {
+                st.config.hardware.mic_gain = gain;
+            }
+            if let Some(lim) = telemetry.volume_limiter {
+                st.config.hardware.volume_limiter = lim;
+            }
+            if let Some(mins) = telemetry.inactivity_timer_mins {
+                st.config.hardware.inactivity_timer_mins = mins;
+            }
+            if let Some(bright) = telemetry.mute_led_brightness {
+                st.config.hardware.mute_led_brightness = bright;
+            }
+            if let Some(pwr) = telemetry.bt_power_default {
+                st.config.hardware.bt_power_on_default = pwr;
+            }
+            if let Some(beh) = telemetry.bt_call_behavior {
+                st.config.hardware.bt_call_behavior = beh;
+            }
+            if let Some(muted) = telemetry.mic_muted {
+                st.mic_muted = Some(muted);
+            }
             st.touch();
         }
         self.worker_handle.broadcast_state(sse_event_name);

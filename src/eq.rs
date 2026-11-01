@@ -11,9 +11,35 @@
 //   `encoded = 2 * (10 + gain_db)` in `0..=40` (`0x00..=0x28`), where `0 dB == 20 (0x14)`.
 
 use crate::device::{
-    build_gaia_command, EQ_OPCODE, GAIA_SET_EQ_CMD, HID_MSG_SIZE,
+    build_gaia_command, EQ_24G_OPCODE, EQ_BT_OPCODE, EQ_MIC_OPCODE, GAIA_SET_EQ_CMD,
+    HID_MSG_SIZE,
 };
 use anyhow::{bail, Result};
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum EqChannel {
+    Speaker24G = 0,
+    SpeakerBt = 1,
+    Microphone = 2,
+}
+
+impl EqChannel {
+    pub fn from_str_lossy(s: &str) -> Self {
+        match s.trim().to_ascii_lowercase().as_str() {
+            "bt" | "bluetooth" | "speaker_bt" => Self::SpeakerBt,
+            "mic" | "microphone" => Self::Microphone,
+            _ => Self::Speaker24G,
+        }
+    }
+
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Speaker24G => "24g",
+            Self::SpeakerBt => "bt",
+            Self::Microphone => "mic",
+        }
+    }
+}
 
 pub const EQ_BAND_COUNT: usize = 10;
 
@@ -323,17 +349,29 @@ impl ParametricEqProfile {
         Ok(Self::from_gains(name, "Custom CLI EQ profile", gains))
     }
 
-    /// Builds the 64-byte USB HID report for writing the 10-band EQ to the headset (`0x33`).
-    pub fn build_hid_report(&self) -> [u8; HID_MSG_SIZE] {
+    /// Builds the 64-byte USB HID report for writing the 10-band EQ to the headset for a specific channel.
+    /// - `Speaker24G`: opcode `0x33`
+    /// - `SpeakerBt`: opcode `0x34`
+    /// - `Microphone`: opcode `0x32`
+    pub fn build_hid_report_for_channel(&self, channel: EqChannel) -> [u8; HID_MSG_SIZE] {
         let mut data = [0u8; HID_MSG_SIZE];
         data[0] = 0x00;
-        data[1] = EQ_OPCODE;
+        data[1] = match channel {
+            EqChannel::Speaker24G => EQ_24G_OPCODE,
+            EqChannel::SpeakerBt => EQ_BT_OPCODE,
+            EqChannel::Microphone => EQ_MIC_OPCODE,
+        };
         for (i, band) in self.bands.iter().enumerate() {
             data[2 + i] = band.encoded_gain();
         }
         // Trailing band termination byte expected by Nova 7 firmware
         data[2 + EQ_BAND_COUNT] = 0x00;
         data
+    }
+
+    /// Builds the 64-byte USB HID report for writing the 10-band EQ to the headset (`0x33`).
+    pub fn build_hid_report(&self) -> [u8; HID_MSG_SIZE] {
+        self.build_hid_report_for_channel(EqChannel::Speaker24G)
     }
 
     /// Builds the Bluetooth GAIA v3 command payload (`0x0933`) matching the Android Companion app.
@@ -345,5 +383,41 @@ impl ParametricEqProfile {
         }
         payload.push(0x00);
         build_gaia_command(GAIA_SET_EQ_CMD, &payload)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_eq_channel_from_str() {
+        assert_eq!(EqChannel::from_str_lossy("24g"), EqChannel::Speaker24G);
+        assert_eq!(EqChannel::from_str_lossy("speaker_24ghz"), EqChannel::Speaker24G);
+        assert_eq!(EqChannel::from_str_lossy("bt"), EqChannel::SpeakerBt);
+        assert_eq!(EqChannel::from_str_lossy("bluetooth"), EqChannel::SpeakerBt);
+        assert_eq!(EqChannel::from_str_lossy("speaker_bt"), EqChannel::SpeakerBt);
+        assert_eq!(EqChannel::from_str_lossy("mic"), EqChannel::Microphone);
+        assert_eq!(EqChannel::from_str_lossy("microphone"), EqChannel::Microphone);
+        assert_eq!(EqChannel::from_str_lossy("unknown"), EqChannel::Speaker24G);
+    }
+
+    #[test]
+    fn test_build_hid_report_for_channel_opcodes() {
+        let profile = ParametricEqProfile::flat();
+        let rep_24g = profile.build_hid_report_for_channel(EqChannel::Speaker24G);
+        assert_eq!(rep_24g[0], 0x00);
+        assert_eq!(rep_24g[1], 0x33);
+
+        let rep_bt = profile.build_hid_report_for_channel(EqChannel::SpeakerBt);
+        assert_eq!(rep_bt[0], 0x00);
+        assert_eq!(rep_bt[1], 0x34);
+
+        let rep_mic = profile.build_hid_report_for_channel(EqChannel::Microphone);
+        assert_eq!(rep_mic[0], 0x00);
+        assert_eq!(rep_mic[1], 0x32);
+
+        // Verify existing build_hid_report still defaults to 24G (0x33)
+        assert_eq!(profile.build_hid_report()[1], 0x33);
     }
 }

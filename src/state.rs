@@ -13,7 +13,7 @@ use crate::device::{
     MAX_INACTIVITY_MINUTES, MAX_MIC_GAIN_LEVEL, MAX_MUTE_LED_BRIGHTNESS, MAX_SIDETONE_LEVEL,
     MAX_VOLUME_PERCENT,
 };
-use crate::eq::ParametricEqProfile;
+use crate::eq::{EqChannel, ParametricEqProfile};
 use crate::telemetry::HeadsetTelemetry;
 use crate::usb::{
     hidapi_request_status, hidapi_send_report, hidapi_send_reports, rusb_send_hid_report,
@@ -30,14 +30,30 @@ const USB_INTER_REPORT_DELAY: Duration = Duration::from_millis(15);
 /// Commands sent from the HTTP API or CLI to the single-threaded USB `DeviceWorker`.
 #[derive(Debug)]
 pub enum DeviceCommand {
-    /// Apply a 10-band Parametric EQ profile (`0x33`) and optionally persist it as active.
+    /// Apply a 10-band Parametric EQ profile (`0x33`, `0x34`, or `0x32`) and optionally persist it as active.
     ApplyEq {
+        channel: EqChannel,
         profile: ParametricEqProfile,
         save_profile_to_disk: bool,
         reply: Sender<Result<()>>,
     },
-    /// Activate an existing EQ preset/profile by name (`0x33`).
+    /// Activate an existing EQ preset/profile by name for a channel.
     ActivatePreset {
+        channel: EqChannel,
+        name: String,
+        reply: Sender<Result<ParametricEqProfile>>,
+    },
+    /// Set 10-band Parametric EQ profile for a channel.
+    #[allow(dead_code)]
+    SetEq {
+        channel: EqChannel,
+        profile: ParametricEqProfile,
+        reply: Sender<Result<()>>,
+    },
+    /// Apply named EQ preset for a channel.
+    #[allow(dead_code)]
+    ApplyPreset {
+        channel: EqChannel,
         name: String,
         reply: Sender<Result<ParametricEqProfile>>,
     },
@@ -87,6 +103,10 @@ pub struct HeadsetState {
     pub telemetry: HeadsetTelemetry,
     pub config: AppConfig,
     pub active_eq: ParametricEqProfile,
+    pub active_eq_24g: ParametricEqProfile,
+    pub active_eq_bt: ParametricEqProfile,
+    pub active_eq_mic: ParametricEqProfile,
+    pub mic_muted: Option<bool>,
     pub available_presets: Vec<ParametricEqProfile>,
     pub last_updated_ms: u64,
 }
@@ -94,15 +114,21 @@ pub struct HeadsetState {
 impl HeadsetState {
     pub fn new(
         config: AppConfig,
-        active_eq: ParametricEqProfile,
+        active_eq_24g: ParametricEqProfile,
+        active_eq_bt: ParametricEqProfile,
+        active_eq_mic: ParametricEqProfile,
         available_presets: Vec<ParametricEqProfile>,
     ) -> Self {
         Self {
             usb_connected: false,
             product_id: None,
             telemetry: HeadsetTelemetry::default(),
+            active_eq: active_eq_24g.clone(),
+            active_eq_24g,
+            active_eq_bt,
+            active_eq_mic,
+            mic_muted: None,
             config,
-            active_eq,
             available_presets,
             last_updated_ms: now_epoch_ms(),
         }
@@ -141,6 +167,7 @@ impl HeadsetState {
         let mic_muted = self
             .telemetry
             .mic_muted
+            .or(self.mic_muted)
             .map(|v| v.to_string())
             .unwrap_or_else(|| "null".to_string());
         let game_vol = self.telemetry.game_volume.unwrap_or(100);
@@ -163,7 +190,14 @@ impl HeadsetState {
                 "\"mic_muted\":{},",
                 "\"chatmix\":{{\"game\":{},\"chat\":{}}},",
                 "\"active_profile\":\"{}\",",
+                "\"active_profile_24g\":\"{}\",",
+                "\"active_profile_bt\":\"{}\",",
+                "\"active_profile_mic\":\"{}\",",
                 "\"eq\":{},",
+                "\"eq_24g\":{},",
+                "\"eq_bt\":{},",
+                "\"eq_mic\":{},",
+                "\"telemetry\":{},",
                 "\"settings\":{},",
                 "\"last_updated_ms\":{}",
                 "}}"
@@ -179,11 +213,100 @@ impl HeadsetState {
             game_vol,
             chat_vol,
             escape_json(&self.config.active_profile),
-            eq_profile_to_json(&self.active_eq),
+            escape_json(&self.config.active_profile_24g),
+            escape_json(&self.config.active_profile_bt),
+            escape_json(&self.config.active_profile_mic),
+            eq_profile_to_json(&self.active_eq_24g),
+            eq_profile_to_json(&self.active_eq_24g),
+            eq_profile_to_json(&self.active_eq_bt),
+            eq_profile_to_json(&self.active_eq_mic),
+            telemetry_to_json(&self.telemetry),
             config_to_settings_json(&self.config),
             self.last_updated_ms
         )
     }
+}
+
+pub fn telemetry_to_json(telemetry: &HeadsetTelemetry) -> String {
+    let sidetone = telemetry
+        .sidetone_level
+        .map(|v| v.to_string())
+        .unwrap_or_else(|| "null".to_string());
+    let mic_gain = telemetry
+        .mic_gain
+        .map(|v| v.to_string())
+        .unwrap_or_else(|| "null".to_string());
+    let vol_lim = telemetry
+        .volume_limiter
+        .map(|v| v.to_string())
+        .unwrap_or_else(|| "null".to_string());
+    let inactivity = telemetry
+        .inactivity_timer_mins
+        .map(|v| v.to_string())
+        .unwrap_or_else(|| "null".to_string());
+    let mute_led = telemetry
+        .mute_led_brightness
+        .map(|v| v.to_string())
+        .unwrap_or_else(|| "null".to_string());
+    let bt_power = telemetry
+        .bt_power_default
+        .map(|v| v.to_string())
+        .unwrap_or_else(|| "null".to_string());
+    let bt_call = telemetry
+        .bt_call_behavior
+        .map(|v| format!("\"{}\"", v.as_str()))
+        .unwrap_or_else(|| "null".to_string());
+    let mic_muted = telemetry
+        .mic_muted
+        .map(|v| v.to_string())
+        .unwrap_or_else(|| "null".to_string());
+    let batt_pct = telemetry
+        .battery_percent
+        .map(|v| v.to_string())
+        .unwrap_or_else(|| "null".to_string());
+    let batt_raw = telemetry
+        .battery_raw
+        .map(|v| v.to_string())
+        .unwrap_or_else(|| "null".to_string());
+    let game_vol = telemetry
+        .game_volume
+        .map(|v| v.to_string())
+        .unwrap_or_else(|| "null".to_string());
+    let chat_vol = telemetry
+        .chat_volume
+        .map(|v| v.to_string())
+        .unwrap_or_else(|| "null".to_string());
+
+    format!(
+        concat!(
+            "{{",
+            "\"sidetone_level\":{},",
+            "\"mic_gain\":{},",
+            "\"volume_limiter\":{},",
+            "\"inactivity_timer_mins\":{},",
+            "\"mute_led_brightness\":{},",
+            "\"bt_power_default\":{},",
+            "\"bt_call_behavior\":{},",
+            "\"mic_muted\":{},",
+            "\"battery_percent\":{},",
+            "\"battery_raw\":{},",
+            "\"game_volume\":{},",
+            "\"chat_volume\":{}",
+            "}}"
+        ),
+        sidetone,
+        mic_gain,
+        vol_lim,
+        inactivity,
+        mute_led,
+        bt_power,
+        bt_call,
+        mic_muted,
+        batt_pct,
+        batt_raw,
+        game_vol,
+        chat_vol
+    )
 }
 
 pub fn eq_profile_to_json(profile: &ParametricEqProfile) -> String {
@@ -342,13 +465,21 @@ pub struct DeviceWorker {
 
 impl DeviceWorker {
     pub fn create(config_manager: ConfigManager, initial_config: AppConfig) -> (Self, DeviceWorkerHandle) {
-        let active_eq = config_manager
-            .load_profile(&initial_config.active_profile)
+        let active_eq_24g = config_manager
+            .load_profile(&initial_config.active_profile_24g)
+            .unwrap_or_else(|_| ParametricEqProfile::flat());
+        let active_eq_bt = config_manager
+            .load_profile(&initial_config.active_profile_bt)
             .unwrap_or_else(|_| ParametricEqProfile::harman());
+        let active_eq_mic = config_manager
+            .load_profile(&initial_config.active_profile_mic)
+            .unwrap_or_else(|_| ParametricEqProfile::flat());
         let presets = load_all_presets(&config_manager);
         let state = Arc::new(RwLock::new(HeadsetState::new(
             initial_config,
-            active_eq,
+            active_eq_24g,
+            active_eq_bt,
+            active_eq_mic,
             presets,
         )));
         let broadcaster = Arc::new(SseBroadcaster::new());
@@ -388,6 +519,7 @@ impl DeviceWorker {
     ) {
         match cmd {
             DeviceCommand::ApplyEq {
+                channel,
                 profile,
                 save_profile_to_disk,
                 reply,
@@ -397,10 +529,24 @@ impl DeviceWorker {
                         self.handle.config_manager.save_profile(&profile)?;
                     }
 
-                    let report = profile.build_hid_report();
+                    let report = profile.build_hid_report_for_channel(channel);
                     if let Ok(mut st) = self.handle.state.write() {
-                        st.config.active_profile = profile.name.clone();
-                        st.active_eq = profile;
+                        match channel {
+                            EqChannel::Speaker24G => {
+                                st.config.active_profile_24g = profile.name.clone();
+                                st.config.active_profile = profile.name.clone();
+                                st.active_eq_24g = profile.clone();
+                                st.active_eq = profile;
+                            }
+                            EqChannel::SpeakerBt => {
+                                st.config.active_profile_bt = profile.name.clone();
+                                st.active_eq_bt = profile;
+                            }
+                            EqChannel::Microphone => {
+                                st.config.active_profile_mic = profile.name.clone();
+                                st.active_eq_mic = profile;
+                            }
+                        }
                         let _ = self.handle.config_manager.save_config(&st.config);
                         st.available_presets = load_all_presets(&self.handle.config_manager);
                         st.touch();
@@ -413,14 +559,39 @@ impl DeviceWorker {
                 self.handle.broadcast_state("eq");
                 let _ = reply.send(res);
             }
-            DeviceCommand::ActivatePreset { name, reply } => {
+            DeviceCommand::SetEq { channel, profile, reply } => {
+                self.execute_command(
+                    DeviceCommand::ApplyEq {
+                        channel,
+                        profile,
+                        save_profile_to_disk: true,
+                        reply,
+                    },
+                    usb_handle,
+                );
+            }
+            DeviceCommand::ActivatePreset { channel, name, reply } => {
                 let res = (|| -> Result<ParametricEqProfile> {
                     let profile = self.handle.config_manager.load_profile(&name)?;
-                    let report = profile.build_hid_report();
+                    let report = profile.build_hid_report_for_channel(channel);
 
                     if let Ok(mut st) = self.handle.state.write() {
-                        st.config.active_profile = profile.name.clone();
-                        st.active_eq = profile.clone();
+                        match channel {
+                            EqChannel::Speaker24G => {
+                                st.config.active_profile_24g = profile.name.clone();
+                                st.config.active_profile = profile.name.clone();
+                                st.active_eq_24g = profile.clone();
+                                st.active_eq = profile.clone();
+                            }
+                            EqChannel::SpeakerBt => {
+                                st.config.active_profile_bt = profile.name.clone();
+                                st.active_eq_bt = profile.clone();
+                            }
+                            EqChannel::Microphone => {
+                                st.config.active_profile_mic = profile.name.clone();
+                                st.active_eq_mic = profile.clone();
+                            }
+                        }
                         let _ = self.handle.config_manager.save_config(&st.config);
                         st.available_presets = load_all_presets(&self.handle.config_manager);
                         st.touch();
@@ -432,6 +603,12 @@ impl DeviceWorker {
                 })();
                 self.handle.broadcast_state("eq");
                 let _ = reply.send(res);
+            }
+            DeviceCommand::ApplyPreset { channel, name, reply } => {
+                self.execute_command(
+                    DeviceCommand::ActivatePreset { channel, name, reply },
+                    usb_handle,
+                );
             }
             DeviceCommand::SetSidetone {
                 enabled,
@@ -698,4 +875,59 @@ pub fn now_epoch_ms() -> u64 {
         .duration_since(UNIX_EPOCH)
         .map(|d| d.as_millis() as u64)
         .unwrap_or(0)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_headset_state_status_json_three_channels() {
+        let mut cfg = AppConfig::default();
+        cfg.active_profile_24g = "flat".to_string();
+        cfg.active_profile_bt = "harman".to_string();
+        cfg.active_profile_mic = "vocal".to_string();
+
+        let state = HeadsetState::new(
+            cfg,
+            ParametricEqProfile::flat(),
+            ParametricEqProfile::harman(),
+            ParametricEqProfile::vocal(),
+            vec![],
+        );
+
+        let json = state.to_status_json();
+        assert!(json.contains("\"active_profile_24g\":\"flat\""));
+        assert!(json.contains("\"active_profile_bt\":\"harman\""));
+        assert!(json.contains("\"active_profile_mic\":\"vocal\""));
+        assert!(json.contains("\"eq_24g\":"));
+        assert!(json.contains("\"eq_bt\":"));
+        assert!(json.contains("\"eq_mic\":"));
+        assert!(json.contains("\"telemetry\":"));
+    }
+
+    #[test]
+    fn test_telemetry_to_json_serialization() {
+        let mut t = HeadsetTelemetry::default();
+        t.sidetone_level = Some(2);
+        t.mic_gain = Some(14);
+        t.volume_limiter = Some(true);
+        t.inactivity_timer_mins = Some(45);
+        t.mute_led_brightness = Some(3);
+        t.bt_power_default = Some(true);
+        t.bt_call_behavior = Some(BtCallBehavior::Attenuate12dB);
+        t.mic_muted = Some(false);
+        t.battery_percent = Some(85);
+
+        let json = telemetry_to_json(&t);
+        assert!(json.contains("\"sidetone_level\":2"));
+        assert!(json.contains("\"mic_gain\":14"));
+        assert!(json.contains("\"volume_limiter\":true"));
+        assert!(json.contains("\"inactivity_timer_mins\":45"));
+        assert!(json.contains("\"mute_led_brightness\":3"));
+        assert!(json.contains("\"bt_power_default\":true"));
+        assert!(json.contains("\"bt_call_behavior\":\"attenuate_12db\""));
+        assert!(json.contains("\"mic_muted\":false"));
+        assert!(json.contains("\"battery_percent\":85"));
+    }
 }

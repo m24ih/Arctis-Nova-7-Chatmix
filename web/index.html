@@ -921,6 +921,13 @@ pre.diag-json {
       </div>
     </div>
 
+    <!-- 3-Channel EQ Selector -->
+    <div class="m3-segmented-btn-group" id="seg-eq-channel" style="margin-bottom: 16px;">
+      <button type="button" class="m3-seg-btn active" data-channel="24g" onclick="switchEqChannel('24g')">2.4GHz Oyun / Medya</button>
+      <button type="button" class="m3-seg-btn" data-channel="bt" onclick="switchEqChannel('bt')">Bluetooth Ses</button>
+      <button type="button" class="m3-seg-btn" data-channel="mic" onclick="switchEqChannel('mic')">Mikrofon EQ</button>
+    </div>
+
     <!-- Presets Scrollable Filter Chips -->
     <div class="preset-chips-scroll" id="preset-chips-list">
       <!-- Will be populated dynamically with Flat, Harman, FPS, CS2, Valorant, Warm Bass, RPG, Smiley, Vocal -->
@@ -1122,17 +1129,55 @@ pre.diag-json {
     { name: "vocal", label: "Vocal", desc: "Net konuşma, podcast ve sesli sohbet odaklı", gains: [-3, -2, -1, 0, 1.5, 2.5, 3, 2, 0.5, -0.5] }
   ];
 
-  let currentBands = EQ_FREQS.map((f, i) => ({
-    frequency_hz: f,
-    gain_db: PRESETS[1].gains[i],
-    q_factor: 1.414,
-    filter_type: "peaking"
-  }));
+  let activeEqChannel = '24g';
+  const CHANNEL_DESCRIPTIONS = {
+    '24g': '2.4GHz Oyun & Medya DSP Frekans Eğrisi (0x33)',
+    'bt': 'Bluetooth Mobil Ses DSP Frekans Eğrisi (0x34)',
+    'mic': 'Mikrofon Akustik Parametrik Eğrisi (0x32)'
+  };
+  const channelData = {
+    '24g': {
+      activePreset: 'flat',
+      bands: EQ_FREQS.map(f => ({ frequency_hz: f, gain_db: 0, q_factor: 1.414, filter_type: "peaking" }))
+    },
+    'bt': {
+      activePreset: 'harman',
+      bands: EQ_FREQS.map((f, i) => ({ frequency_hz: f, gain_db: PRESETS[1].gains[i], q_factor: 1.414, filter_type: "peaking" }))
+    },
+    'mic': {
+      activePreset: 'flat',
+      bands: EQ_FREQS.map(f => ({ frequency_hz: f, gain_db: 0, q_factor: 1.414, filter_type: "peaking" }))
+    }
+  };
 
-  let activePresetName = "harman";
+  let currentBands = channelData['24g'].bands;
+  let activePresetName = channelData['24g'].activePreset;
   let eqDebounceTimer = null;
   let isDraggingSlider = false;
   let snackbarTimer = null;
+
+  // Channel switcher
+  window.switchEqChannel = function(ch) {
+    if (!channelData[ch]) ch = '24g';
+    activeEqChannel = ch;
+
+    document.querySelectorAll('#seg-eq-channel .m3-seg-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.getAttribute('data-channel') === ch);
+    });
+
+    currentBands = channelData[ch].bands;
+    activePresetName = channelData[ch].activePreset;
+
+    document.querySelectorAll('#preset-chips-list .m3-filter-chip').forEach(c => {
+      c.classList.toggle('active', c.id === 'chip-' + activePresetName);
+    });
+
+    document.getElementById('eq-active-title').textContent =
+      `${CHANNEL_DESCRIPTIONS[ch] || ''} — Aktif Profil: ${activePresetName}`;
+
+    updateEqReadouts();
+    drawEqCurve();
+  };
 
   // Snackbar feedback
   function showSnackbar(msg) {
@@ -1214,6 +1259,8 @@ pre.diag-json {
 
   function activatePreset(p) {
     activePresetName = p.name;
+    channelData[activeEqChannel].activePreset = p.name;
+
     document.querySelectorAll('.m3-filter-chip').forEach(c => c.classList.remove('active'));
     const chip = document.getElementById('chip-' + p.name);
     if (chip) chip.classList.add('active');
@@ -1225,7 +1272,8 @@ pre.diag-json {
     updateEqReadouts();
     drawEqCurve();
     sendEqToServer(p.name, p.desc);
-    showSnackbar(`"${p.label}" önayarı kulaklığa uygulandı`);
+    const channelLabel = { '24g': '2.4GHz Oyun', 'bt': 'Bluetooth Ses', 'mic': 'Mikrofon' }[activeEqChannel] || activeEqChannel;
+    showSnackbar(`"${p.label}" önayarı [${channelLabel}] kanalına uygulandı`);
   }
 
   window.resetEqFlat = function() {
@@ -1242,10 +1290,13 @@ pre.diag-json {
 
   async function sendEqToServer(profileName, description) {
     const payload = {
+      channel: activeEqChannel,
+      target: activeEqChannel,
       gains_db: currentBands.map(b => b.gain_db),
       q_factors: currentBands.map(b => b.q_factor),
       bands: currentBands,
       profile_name: profileName || activePresetName,
+      name: profileName || activePresetName,
       save: true
     };
     try {
@@ -1256,7 +1307,9 @@ pre.diag-json {
       });
       const data = await res.json();
       if (!res.ok || data.ok === false) throw new Error(data.error || `HTTP ${res.status}`);
-      document.getElementById('eq-active-title').textContent = `Aktif Profil: ${profileName || activePresetName} (Dahili 0x33)`;
+      channelData[activeEqChannel].activePreset = profileName || activePresetName;
+      document.getElementById('eq-active-title').textContent =
+        `${CHANNEL_DESCRIPTIONS[activeEqChannel] || ''} — Aktif Profil: ${profileName || activePresetName}`;
     } catch(err) {
       console.warn("EQ send error:", err);
     }
@@ -1565,50 +1618,114 @@ pre.diag-json {
       updateChatmixUi(st.chatmix.game, st.chatmix.chat);
     }
 
-    // Settings
-    if (st.settings) {
-      const s = st.settings;
-      if (typeof s.sidetone_level === 'number') {
-        const lvl = s.sidetone_enabled ? s.sidetone_level : 0;
-        document.querySelectorAll('#seg-sidetone .m3-seg-btn').forEach((b, i) => b.classList.toggle('active', i === lvl));
-      }
-      if (typeof s.mic_gain === 'number') {
-        document.getElementById('rng-mic-gain').value = String(s.mic_gain);
-        document.getElementById('lbl-mic-gain').textContent = s.mic_gain + ' / 15';
-      }
-      const muteLed = (typeof s.mute_led_brightness === "number") ? s.mute_led_brightness : s.mic_mute_led;
-      if (typeof muteLed === 'number') {
-        document.querySelectorAll('#seg-mute-led .m3-seg-btn').forEach((b, i) => b.classList.toggle('active', i === muteLed));
-      }
-      const autoOff = (typeof s.inactivity_timer_mins === "number") ? s.inactivity_timer_mins : s.auto_off_minutes;
-      if (typeof autoOff === 'number') {
-        const validMinutes = [5, 15, 30, 0];
-        document.querySelectorAll('#seg-auto-off .m3-seg-btn').forEach((b, i) => b.classList.toggle('active', validMinutes[i] === autoOff));
-      }
-      if (typeof s.volume_limiter === 'boolean') {
-        document.getElementById('chk-volume-limiter').checked = s.volume_limiter;
-      }
-      const btPower = (typeof s.bt_power_on_default === "boolean") ? s.bt_power_on_default : s.bt_auto_power_on;
-      if (typeof btPower === 'boolean') {
-        document.getElementById('chk-bt-power').checked = btPower;
-      }
-      const btCall = s.bt_call_behavior || s.bt_call_attenuation;
-      if (btCall) {
-        const list = ['do_nothing', 'attenuate_12db', 'mute_game'];
-        document.querySelectorAll('#seg-bt-call .m3-seg-btn').forEach((b, i) => {
-          b.classList.toggle('active', list[i] === btCall);
-        });
-      }
+    // Settings & Live Telemetry Two-Way Sync
+    const s = st.settings || {};
+    const t = st.telemetry || {};
+
+    // Sidetone
+    const sidetoneVal = (typeof t.sidetone_level === 'number') ? t.sidetone_level : s.sidetone_level;
+    if (typeof sidetoneVal === 'number') {
+      const effectiveLvl = (s.sidetone_enabled !== false && sidetoneVal > 0) ? sidetoneVal : (t.sidetone_level || 0);
+      document.querySelectorAll('#seg-sidetone .m3-seg-btn').forEach((b, i) => b.classList.toggle('active', i === effectiveLvl));
     }
 
-    // EQ bands from state
-    if (st.eq && Array.isArray(st.eq.bands) && st.eq.bands.length === 10 && !isDraggingSlider) {
-      currentBands = st.eq.bands.map((b, i) => ({
+    // Mic Gain
+    const micGainVal = (typeof t.mic_gain === 'number') ? t.mic_gain : s.mic_gain;
+    if (typeof micGainVal === 'number') {
+      const rng = document.getElementById('rng-mic-gain');
+      if (rng && document.activeElement !== rng) {
+        rng.value = String(micGainVal);
+      }
+      const lbl = document.getElementById('lbl-mic-gain');
+      if (lbl) lbl.textContent = micGainVal + ' / 15';
+    }
+
+    // Mute LED Brightness
+    const muteLedVal = (typeof t.mute_led_brightness === 'number') ? t.mute_led_brightness : (s.mute_led_brightness ?? s.mic_mute_led);
+    if (typeof muteLedVal === 'number') {
+      document.querySelectorAll('#seg-mute-led .m3-seg-btn').forEach((b, i) => b.classList.toggle('active', i === muteLedVal));
+    }
+
+    // Volume Limiter
+    const volLimVal = (typeof t.volume_limiter === 'boolean') ? t.volume_limiter : s.volume_limiter;
+    if (typeof volLimVal === 'boolean') {
+      const chk = document.getElementById('chk-volume-limiter');
+      if (chk) chk.checked = volLimVal;
+    }
+
+    // Auto-off (Inactivity Sleep Timer)
+    const autoOffVal = (typeof t.inactivity_timer_mins === 'number') ? t.inactivity_timer_mins : (s.inactivity_timer_mins ?? s.auto_off_minutes);
+    if (typeof autoOffVal === 'number') {
+      const validMinutes = [5, 15, 30, 0];
+      document.querySelectorAll('#seg-auto-off .m3-seg-btn').forEach((b, i) => b.classList.toggle('active', validMinutes[i] === autoOffVal));
+    }
+
+    // Bluetooth Auto Power-On Default
+    const btPowerVal = (typeof t.bt_power_default === 'boolean') ? t.bt_power_default : (s.bt_power_on_default ?? s.bt_auto_power_on);
+    if (typeof btPowerVal === 'boolean') {
+      const chk = document.getElementById('chk-bt-power');
+      if (chk) chk.checked = btPowerVal;
+    }
+
+    // Bluetooth Call Mixing Behavior
+    const btCallVal = t.bt_call_behavior || s.bt_call_behavior || s.bt_call_attenuation;
+    if (btCallVal) {
+      const list = ['do_nothing', 'attenuate_12db', 'mute_game'];
+      document.querySelectorAll('#seg-bt-call .m3-seg-btn').forEach((b, i) => b.classList.toggle('active', list[i] === btCallVal));
+    }
+
+    // Three-Channel EQ State Sync
+    if (st.active_profile_24g) channelData['24g'].activePreset = st.active_profile_24g;
+    else if (st.active_profile) channelData['24g'].activePreset = st.active_profile;
+    if (st.active_profile_bt) channelData['bt'].activePreset = st.active_profile_bt;
+    if (st.active_profile_mic) channelData['mic'].activePreset = st.active_profile_mic;
+
+    if (st.eq_24g && Array.isArray(st.eq_24g.bands) && st.eq_24g.bands.length === 10) {
+      channelData['24g'].bands = st.eq_24g.bands.map((b, i) => ({
         frequency_hz: b.frequency_hz || EQ_FREQS[i],
         gain_db: Number(b.gain_db || 0),
         q_factor: Number(b.q_factor || 1.414),
         filter_type: b.filter_type || "peaking"
       }));
+    } else if (st.eq && Array.isArray(st.eq.bands) && st.eq.bands.length === 10) {
+      channelData['24g'].bands = st.eq.bands.map((b, i) => ({
+        frequency_hz: b.frequency_hz || EQ_FREQS[i],
+        gain_db: Number(b.gain_db || 0),
+        q_factor: Number(b.q_factor || 1.414),
+        filter_type: b.filter_type || "peaking"
+      }));
+    }
+
+    if (st.eq_bt && Array.isArray(st.eq_bt.bands) && st.eq_bt.bands.length === 10) {
+      channelData['bt'].bands = st.eq_bt.bands.map((b, i) => ({
+        frequency_hz: b.frequency_hz || EQ_FREQS[i],
+        gain_db: Number(b.gain_db || 0),
+        q_factor: Number(b.q_factor || 1.414),
+        filter_type: b.filter_type || "peaking"
+      }));
+    }
+
+    if (st.eq_mic && Array.isArray(st.eq_mic.bands) && st.eq_mic.bands.length === 10) {
+      channelData['mic'].bands = st.eq_mic.bands.map((b, i) => ({
+        frequency_hz: b.frequency_hz || EQ_FREQS[i],
+        gain_db: Number(b.gain_db || 0),
+        q_factor: Number(b.q_factor || 1.414),
+        filter_type: b.filter_type || "peaking"
+      }));
+    }
+
+    // Refresh active channel controls if user is not currently dragging slider
+    if (!isDraggingSlider) {
+      currentBands = channelData[activeEqChannel].bands;
+      activePresetName = channelData[activeEqChannel].activePreset;
+
+      document.querySelectorAll('#preset-chips-list .m3-filter-chip').forEach(c => {
+        c.classList.toggle('active', c.id === 'chip-' + activePresetName);
+      });
+
+      document.getElementById('eq-active-title').textContent =
+        `${CHANNEL_DESCRIPTIONS[activeEqChannel] || ''} — Aktif Profil: ${activePresetName}`;
+
       updateEqReadouts();
       drawEqCurve();
     }

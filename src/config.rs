@@ -53,6 +53,9 @@ pub const DEFAULT_WEB_BIND: &str = "127.0.0.1:3927";
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AppConfig {
     pub active_profile: String,
+    pub active_profile_24g: String,
+    pub active_profile_bt: String,
+    pub active_profile_mic: String,
     pub auto_apply_on_connect: bool,
     pub save_to_flash: bool,
     pub poll_status_interval_secs: u64,
@@ -64,7 +67,10 @@ pub struct AppConfig {
 impl Default for AppConfig {
     fn default() -> Self {
         Self {
-            active_profile: "harman".to_string(),
+            active_profile: "flat".to_string(),
+            active_profile_24g: "flat".to_string(),
+            active_profile_bt: "harman".to_string(),
+            active_profile_mic: "flat".to_string(),
             auto_apply_on_connect: true,
             save_to_flash: false,
             poll_status_interval_secs: 2,
@@ -93,6 +99,9 @@ impl AppConfig {
 [general]
 # Active EQ profile name inside `profiles/<name>.toml` (e.g. "flat", "harman", "fps")
 active_profile = "{active_profile}"
+active_profile_24g = "{active_profile_24g}"
+active_profile_bt = "{active_profile_bt}"
+active_profile_mic = "{active_profile_mic}"
 # Automatically apply EQ and hardware settings when the USB receiver connects
 auto_apply_on_connect = {auto_apply}
 # Persist settings to headset onboard flash memory (0x09) when applying
@@ -121,6 +130,9 @@ bt_power_on_default = {bt_power}
 bt_call_behavior = "{bt_call}"
 "#,
             active_profile = escape_toml_str(&self.active_profile),
+            active_profile_24g = escape_toml_str(&self.active_profile_24g),
+            active_profile_bt = escape_toml_str(&self.active_profile_bt),
+            active_profile_mic = escape_toml_str(&self.active_profile_mic),
             auto_apply = self.auto_apply_on_connect,
             save_flash = self.save_to_flash,
             poll_secs = self.poll_status_interval_secs,
@@ -141,6 +153,8 @@ bt_call_behavior = "{bt_call}"
         let mut cfg = Self::default();
         let mut web_host: Option<String> = None;
         let mut web_port: Option<u16> = None;
+        let mut active_profile_found = false;
+        let mut active_profile_24g_found = false;
 
         for raw_line in input.lines() {
             let line = strip_comment(raw_line).trim();
@@ -156,6 +170,17 @@ bt_call_behavior = "{bt_call}"
             match key {
                 "active_profile" => {
                     cfg.active_profile = unquote_toml_str(val);
+                    active_profile_found = true;
+                }
+                "active_profile_24g" => {
+                    cfg.active_profile_24g = unquote_toml_str(val);
+                    active_profile_24g_found = true;
+                }
+                "active_profile_bt" => {
+                    cfg.active_profile_bt = unquote_toml_str(val);
+                }
+                "active_profile_mic" => {
+                    cfg.active_profile_mic = unquote_toml_str(val);
                 }
                 "auto_apply_on_connect" => {
                     if let Some(b) = parse_bool(val) {
@@ -236,6 +261,13 @@ bt_call_behavior = "{bt_call}"
                 }
                 _ => {}
             }
+        }
+
+        // Backward compatibility: if active_profile_24g was not set, fall back to active_profile
+        if !active_profile_24g_found && active_profile_found {
+            cfg.active_profile_24g = cfg.active_profile.clone();
+        } else if active_profile_24g_found && !active_profile_found {
+            cfg.active_profile = cfg.active_profile_24g.clone();
         }
 
         if web_host.is_some() || web_port.is_some() {
@@ -622,4 +654,58 @@ fn parse_bracket_list(val: &str) -> Option<Vec<&str>> {
         .filter(|s| !s.is_empty())
         .collect();
     Some(items)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_config_default_and_serialization() {
+        let cfg = AppConfig::default();
+        assert_eq!(cfg.active_profile, "flat");
+        assert_eq!(cfg.active_profile_24g, "flat");
+        assert_eq!(cfg.active_profile_bt, "harman");
+        assert_eq!(cfg.active_profile_mic, "flat");
+
+        let toml_str = cfg.to_toml_string();
+        assert!(toml_str.contains("active_profile_24g = \"flat\""));
+        assert!(toml_str.contains("active_profile_bt = \"harman\""));
+        assert!(toml_str.contains("active_profile_mic = \"flat\""));
+
+        let loaded = AppConfig::from_toml_str(&toml_str).expect("Failed to parse config TOML");
+        assert_eq!(loaded.active_profile_24g, "flat");
+        assert_eq!(loaded.active_profile_bt, "harman");
+        assert_eq!(loaded.active_profile_mic, "flat");
+    }
+
+    #[test]
+    fn test_config_backward_compatibility() {
+        // Old config file with only active_profile = "fps"
+        let old_toml = r#"
+[general]
+active_profile = "fps"
+auto_apply_on_connect = false
+"#;
+        let loaded = AppConfig::from_toml_str(old_toml).expect("Failed to parse old TOML");
+        assert_eq!(loaded.active_profile, "fps");
+        assert_eq!(loaded.active_profile_24g, "fps");
+        assert_eq!(loaded.active_profile_bt, "harman"); // Default
+        assert_eq!(loaded.active_profile_mic, "flat");   // Default
+    }
+
+    #[test]
+    fn test_config_explicit_three_channels() {
+        let toml = r#"
+[general]
+active_profile_24g = "cs2"
+active_profile_bt = "vocal"
+active_profile_mic = "smiley"
+"#;
+        let loaded = AppConfig::from_toml_str(toml).expect("Failed to parse TOML");
+        assert_eq!(loaded.active_profile_24g, "cs2");
+        assert_eq!(loaded.active_profile, "cs2");
+        assert_eq!(loaded.active_profile_bt, "vocal");
+        assert_eq!(loaded.active_profile_mic, "smiley");
+    }
 }

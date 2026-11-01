@@ -16,8 +16,8 @@
 
 use crate::device::BtCallBehavior;
 use crate::eq::{
-    EqBand, EqFilterType, ParametricEqProfile, DEFAULT_Q_FACTOR, EQ_BAND_COUNT, EQ_FREQUENCIES_HZ,
-    MAX_EQ_GAIN_DB, MIN_EQ_GAIN_DB,
+    EqBand, EqChannel, EqFilterType, ParametricEqProfile, DEFAULT_Q_FACTOR, EQ_BAND_COUNT,
+    EQ_FREQUENCIES_HZ, MAX_EQ_GAIN_DB, MIN_EQ_GAIN_DB,
 };
 use crate::state::{
     config_to_settings_json, eq_profile_to_json, escape_json, load_all_presets, DeviceCommand,
@@ -162,21 +162,10 @@ fn handle_client(
                 .unwrap_or_else(|_| r#"{"error":"State lock poisoned"}"#.to_string());
             write_json_response(&mut stream, 200, &json)
         }
-        ("GET", "/api/eq") => {
-            let json = worker
-                .state
-                .read()
-                .map(|s| {
-                    format!(
-                        "{{\"active_profile\":\"{}\",\"profile\":{}}}",
-                        escape_json(&s.config.active_profile),
-                        eq_profile_to_json(&s.active_eq)
-                    )
-                })
-                .unwrap_or_else(|_| r#"{"error":"State lock poisoned"}"#.to_string());
-            write_json_response(&mut stream, 200, &json)
+        ("GET", "/api/eq") => handle_get_eq(&mut stream, &worker, raw_target),
+        ("POST", "/api/eq") | ("PUT", "/api/eq") => {
+            handle_post_eq(&mut stream, &worker, &body, raw_target)
         }
-        ("POST", "/api/eq") | ("PUT", "/api/eq") => handle_post_eq(&mut stream, &worker, &body),
         ("GET", "/api/presets") => {
             let presets = load_all_presets(&worker.config_manager);
             let active_name = worker
@@ -192,9 +181,10 @@ fn handle_client(
             );
             write_json_response(&mut stream, 200, &json)
         }
-        ("POST", "/api/presets") | ("PUT", "/api/presets") => {
-            handle_post_presets(&mut stream, &worker, &body)
-        }
+        ("POST", "/api/presets")
+        | ("PUT", "/api/presets")
+        | ("POST", "/api/presets/apply")
+        | ("POST", "/api/preset/apply") => handle_post_presets(&mut stream, &worker, &body, raw_target),
         ("GET", "/api/settings") => {
             let json = worker
                 .state
@@ -274,11 +264,67 @@ fn handle_sse_stream(
     Ok(())
 }
 
+fn handle_get_eq(
+    stream: &mut TcpStream,
+    worker: &DeviceWorkerHandle,
+    raw_target: &str,
+) -> Result<()> {
+    let channel_str = extract_query_param(raw_target, "channel")
+        .or_else(|| extract_query_param(raw_target, "target"))
+        .unwrap_or_else(|| "24g".to_string());
+    let channel = EqChannel::from_str_lossy(&channel_str);
+
+    let json = worker
+        .state
+        .read()
+        .map(|s| {
+            let (prof_name, prof) = match channel {
+                EqChannel::Speaker24G => (&s.config.active_profile_24g, &s.active_eq_24g),
+                EqChannel::SpeakerBt => (&s.config.active_profile_bt, &s.active_eq_bt),
+                EqChannel::Microphone => (&s.config.active_profile_mic, &s.active_eq_mic),
+            };
+            format!(
+                concat!(
+                    "{{",
+                    "\"channel\":\"{}\",",
+                    "\"active_profile\":\"{}\",",
+                    "\"profile\":{},",
+                    "\"active_profile_24g\":\"{}\",",
+                    "\"active_profile_bt\":\"{}\",",
+                    "\"active_profile_mic\":\"{}\",",
+                    "\"eq_24g\":{},",
+                    "\"eq_bt\":{},",
+                    "\"eq_mic\":{}",
+                    "}}"
+                ),
+                channel.as_str(),
+                escape_json(prof_name),
+                eq_profile_to_json(prof),
+                escape_json(&s.config.active_profile_24g),
+                escape_json(&s.config.active_profile_bt),
+                escape_json(&s.config.active_profile_mic),
+                eq_profile_to_json(&s.active_eq_24g),
+                eq_profile_to_json(&s.active_eq_bt),
+                eq_profile_to_json(&s.active_eq_mic)
+            )
+        })
+        .unwrap_or_else(|_| r#"{"error":"State lock poisoned"}"#.to_string());
+    write_json_response(stream, 200, &json)
+}
+
 fn handle_post_eq(
     stream: &mut TcpStream,
     worker: &DeviceWorkerHandle,
     body: &str,
+    raw_target: &str,
 ) -> Result<()> {
+    let channel_str = extract_json_string(body, "channel")
+        .or_else(|| extract_json_string(body, "target"))
+        .or_else(|| extract_query_param(raw_target, "channel"))
+        .or_else(|| extract_query_param(raw_target, "target"))
+        .unwrap_or_else(|| "24g".to_string());
+    let channel = EqChannel::from_str_lossy(&channel_str);
+
     // Case 1: Only a preset/profile name was provided without custom gains -> activate preset
     let has_gains = extract_json_f32_array(body, "gains_db").is_some()
         || extract_json_f32_array(body, "gains").is_some()
@@ -291,13 +337,15 @@ fn handle_post_eq(
         {
             let (tx, rx) = mpsc::channel();
             worker.send_command(DeviceCommand::ActivatePreset {
+                channel,
                 name: preset_name,
                 reply: tx,
             })?;
             return match rx.recv_timeout(CMD_REPLY_TIMEOUT) {
                 Ok(Ok(profile)) => {
                     let resp = format!(
-                        "{{\"ok\":true,\"active_profile\":\"{}\",\"profile\":{}}}",
+                        "{{\"ok\":true,\"channel\":\"{}\",\"active_profile\":\"{}\",\"profile\":{}}}",
+                        channel.as_str(),
                         escape_json(&profile.name),
                         eq_profile_to_json(&profile)
                     );
@@ -318,6 +366,7 @@ fn handle_post_eq(
 
     let (tx, rx) = mpsc::channel();
     worker.send_command(DeviceCommand::ApplyEq {
+        channel,
         profile: profile.clone(),
         save_profile_to_disk: save_to_disk,
         reply: tx,
@@ -326,7 +375,8 @@ fn handle_post_eq(
     match rx.recv_timeout(CMD_REPLY_TIMEOUT) {
         Ok(Ok(())) => {
             let resp = format!(
-                "{{\"ok\":true,\"active_profile\":\"{}\",\"profile\":{}}}",
+                "{{\"ok\":true,\"channel\":\"{}\",\"active_profile\":\"{}\",\"profile\":{}}}",
+                channel.as_str(),
                 escape_json(&profile.name),
                 eq_profile_to_json(&profile)
             );
@@ -341,6 +391,7 @@ fn handle_post_presets(
     stream: &mut TcpStream,
     worker: &DeviceWorkerHandle,
     body: &str,
+    raw_target: &str,
 ) -> Result<()> {
     // If body includes gains/bands, save & activate as a named preset
     let has_gains = extract_json_f32_array(body, "gains_db").is_some()
@@ -348,8 +399,15 @@ fn handle_post_presets(
         || extract_json_array_raw(body, "bands").is_some();
 
     if has_gains {
-        return handle_post_eq(stream, worker, body);
+        return handle_post_eq(stream, worker, body, raw_target);
     }
+
+    let channel_str = extract_json_string(body, "channel")
+        .or_else(|| extract_json_string(body, "target"))
+        .or_else(|| extract_query_param(raw_target, "channel"))
+        .or_else(|| extract_query_param(raw_target, "target"))
+        .unwrap_or_else(|| "24g".to_string());
+    let channel = EqChannel::from_str_lossy(&channel_str);
 
     let Some(name) = extract_json_string(body, "name")
         .or_else(|| extract_json_string(body, "preset"))
@@ -363,12 +421,17 @@ fn handle_post_presets(
     };
 
     let (tx, rx) = mpsc::channel();
-    worker.send_command(DeviceCommand::ActivatePreset { name, reply: tx })?;
+    worker.send_command(DeviceCommand::ActivatePreset {
+        channel,
+        name,
+        reply: tx,
+    })?;
 
     match rx.recv_timeout(CMD_REPLY_TIMEOUT) {
         Ok(Ok(profile)) => {
             let resp = format!(
-                "{{\"ok\":true,\"active_profile\":\"{}\",\"profile\":{}}}",
+                "{{\"ok\":true,\"channel\":\"{}\",\"active_profile\":\"{}\",\"profile\":{}}}",
+                channel.as_str(),
                 escape_json(&profile.name),
                 eq_profile_to_json(&profile)
             );
@@ -683,6 +746,18 @@ fn find_json_value_slice<'a>(json: &'a str, key: &str) -> Option<&'a str> {
     None
 }
 
+pub(crate) fn extract_query_param(url: &str, param: &str) -> Option<String> {
+    let query = url.split_once('?')?.1;
+    for pair in query.split('&') {
+        if let Some((k, v)) = pair.split_once('=') {
+            if k.eq_ignore_ascii_case(param) {
+                return Some(v.to_string());
+            }
+        }
+    }
+    None
+}
+
 pub(crate) fn extract_json_string(json: &str, key: &str) -> Option<String> {
     let val = find_json_value_slice(json, key)?;
     let inner = val.strip_prefix('"')?;
@@ -875,4 +950,17 @@ fn write_error_response(stream: &mut TcpStream, status: u16, message: &str) -> R
 }
 
 const DEFAULT_INDEX_HTML: &str = include_str!("../web/index.html");
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_extract_query_param() {
+        assert_eq!(extract_query_param("/api/eq?channel=bt", "channel"), Some("bt".to_string()));
+        assert_eq!(extract_query_param("/api/eq?target=mic&other=1", "target"), Some("mic".to_string()));
+        assert_eq!(extract_query_param("/api/eq?other=1&channel=24g", "channel"), Some("24g".to_string()));
+        assert_eq!(extract_query_param("/api/eq", "channel"), None);
+    }
+}
 

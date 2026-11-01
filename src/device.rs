@@ -44,7 +44,11 @@ pub(crate) const HID_CLASS_CODE: u8 = 3;
 
 // --- USB HID Opcodes (and Sync Event Opcodes) ---
 pub(crate) const SAVE_TO_FLASH_OPCODE: u8 = 0x09;
+#[allow(dead_code)]
 pub(crate) const EQ_OPCODE: u8 = 0x33;
+pub(crate) const EQ_24G_OPCODE: u8 = 0x33;
+pub(crate) const EQ_BT_OPCODE: u8 = 0x34;
+pub(crate) const EQ_MIC_OPCODE: u8 = 0x32;
 pub(crate) const MIC_GAIN_OPCODE: u8 = 0x37;
 pub(crate) const SIDETONE_OPCODE: u8 = 0x39;
 pub(crate) const VOLUME_LIMITER_OPCODE: u8 = 0x3A;
