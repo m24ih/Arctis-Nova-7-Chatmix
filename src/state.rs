@@ -229,9 +229,13 @@ pub fn config_to_settings_json(config: &AppConfig) -> String {
             "\"mic_gain\":{},",
             "\"volume_limiter\":{},",
             "\"inactivity_timer_mins\":{},",
+            "\"auto_off_minutes\":{},",
             "\"mute_led_brightness\":{},",
+            "\"mic_mute_led\":{},",
             "\"bt_power_on_default\":{},",
+            "\"bt_auto_power_on\":{},",
             "\"bt_call_behavior\":\"{}\",",
+            "\"bt_call_attenuation\":\"{}\",",
             "\"auto_apply_on_connect\":{},",
             "\"save_to_flash\":{},",
             "\"poll_status_interval_secs\":{},",
@@ -243,8 +247,12 @@ pub fn config_to_settings_json(config: &AppConfig) -> String {
         hw.mic_gain,
         hw.volume_limiter,
         hw.inactivity_timer_mins,
+        hw.inactivity_timer_mins,
+        hw.mute_led_brightness,
         hw.mute_led_brightness,
         hw.bt_power_on_default,
+        hw.bt_power_on_default,
+        hw.bt_call_behavior.as_str(),
         hw.bt_call_behavior.as_str(),
         config.auto_apply_on_connect,
         config.save_to_flash,
@@ -533,6 +541,9 @@ impl DeviceWorker {
                             st.config.hardware.bt_power_on_default = bt_pwr;
                             st.telemetry.bt_power_default = Some(bt_pwr);
                             reports.push(build_bt_power_default_report(bt_pwr));
+                            // Bluetooth power-on default must be written to onboard flash (0x09)
+                            // to persist across headset power cycles.
+                            reports.push(build_save_to_flash_report());
                         }
 
                         if let Some(bt_call) = patch.bt_call_behavior {

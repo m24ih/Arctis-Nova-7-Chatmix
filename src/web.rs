@@ -439,10 +439,15 @@ fn handle_post_settings(
         volume_limiter: extract_json_bool(body, "volume_limiter"),
         inactivity_timer_mins: extract_json_u64(body, "inactivity_timer_mins")
             .or_else(|| extract_json_u64(body, "sleep_timer_mins"))
+            .or_else(|| extract_json_u64(body, "auto_off_minutes"))
             .map(|v| v.min(90) as u8),
-        mute_led_brightness: extract_json_u64(body, "mute_led_brightness").map(|v| v.min(3) as u8),
-        bt_power_on_default: extract_json_bool(body, "bt_power_on_default"),
+        mute_led_brightness: extract_json_u64(body, "mute_led_brightness")
+            .or_else(|| extract_json_u64(body, "mic_mute_led"))
+            .map(|v| v.min(3) as u8),
+        bt_power_on_default: extract_json_bool(body, "bt_power_on_default")
+            .or_else(|| extract_json_bool(body, "bt_auto_power_on")),
         bt_call_behavior: extract_json_string(body, "bt_call_behavior")
+            .or_else(|| extract_json_string(body, "bt_call_attenuation"))
             .map(|s| BtCallBehavior::from_str_lossy(&s)),
         auto_apply_on_connect: extract_json_bool(body, "auto_apply_on_connect"),
         save_to_flash: extract_json_bool(body, "save_to_flash"),

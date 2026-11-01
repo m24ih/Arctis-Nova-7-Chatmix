@@ -13,8 +13,8 @@ use config::ConfigManager;
 use controller::ArctisController;
 use device::{
     build_bt_call_behavior_report, build_bt_power_default_report, build_inactivity_timer_report,
-    build_mic_gain_report, build_mute_led_brightness_report, build_sidetone_level_report,
-    build_volume_limiter_report, BtCallBehavior,
+    build_mic_gain_report, build_mute_led_brightness_report, build_save_to_flash_report,
+    build_sidetone_level_report, build_volume_limiter_report, BtCallBehavior,
 };
 use eq::ParametricEqProfile;
 use log::info;
@@ -221,6 +221,7 @@ fn handle_cli_args(args: &[String]) -> Result<bool> {
                 cfg.hardware.bt_power_on_default = enabled;
                 config_modified = true;
                 hidapi_send_report(&build_bt_power_default_report(enabled))?;
+                hidapi_send_report(&build_save_to_flash_report())?;
                 println!("Bluetooth power-on default set to {}", enabled);
             }
             "--bt-call" => {

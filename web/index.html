@@ -1458,7 +1458,7 @@ pre.diag-json {
     fetch('/api/settings', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ mic_mute_led: Number(level) })
+      body: JSON.stringify({ mute_led_brightness: Number(level), mic_mute_led: Number(level) })
     }).then(r => r.json()).then(d => {
       if (d.ok) showSnackbar('Mikrofon LED parlaklığı: ' + ['Kapalı', 'Düşük', 'Orta', 'Yüksek'][level]);
     }).catch(e => showSnackbar('Hata: ' + e.message));
@@ -1482,7 +1482,7 @@ pre.diag-json {
     fetch('/api/settings', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ auto_off_minutes: minutes })
+      body: JSON.stringify({ inactivity_timer_mins: minutes, auto_off_minutes: minutes })
     }).then(r => r.json()).then(d => {
       if (d.ok) showSnackbar('Otomatik kapanma: ' + (minutes === 0 ? 'Asla' : minutes + ' dakika'));
     }).catch(e => showSnackbar('Hata: ' + e.message));
@@ -1492,7 +1492,7 @@ pre.diag-json {
     fetch('/api/settings', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ bt_auto_power_on: enabled })
+      body: JSON.stringify({ bt_power_on_default: enabled, bt_auto_power_on: enabled })
     }).then(r => r.json()).then(d => {
       if (d.ok) showSnackbar('Bluetooth Açılış ' + (enabled ? 'Etkinleştirildi' : 'Kapatıldı'));
     }).catch(e => showSnackbar('Hata: ' + e.message));
@@ -1506,7 +1506,7 @@ pre.diag-json {
     fetch('/api/settings', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ bt_call_attenuation: behavior })
+      body: JSON.stringify({ bt_call_behavior: behavior, bt_call_attenuation: behavior })
     }).then(r => r.json()).then(d => {
       if (d.ok) showSnackbar('BT Çağrı davranışı güncellendi');
     }).catch(e => showSnackbar('Hata: ' + e.message));
@@ -1576,23 +1576,27 @@ pre.diag-json {
         document.getElementById('rng-mic-gain').value = String(s.mic_gain);
         document.getElementById('lbl-mic-gain').textContent = s.mic_gain + ' / 15';
       }
-      if (typeof s.mic_mute_led === 'number') {
-        document.querySelectorAll('#seg-mute-led .m3-seg-btn').forEach((b, i) => b.classList.toggle('active', i === s.mic_mute_led));
+      const muteLed = (typeof s.mute_led_brightness === "number") ? s.mute_led_brightness : s.mic_mute_led;
+      if (typeof muteLed === 'number') {
+        document.querySelectorAll('#seg-mute-led .m3-seg-btn').forEach((b, i) => b.classList.toggle('active', i === muteLed));
       }
-      if (typeof s.auto_off_minutes === 'number') {
+      const autoOff = (typeof s.inactivity_timer_mins === "number") ? s.inactivity_timer_mins : s.auto_off_minutes;
+      if (typeof autoOff === 'number') {
         const validMinutes = [5, 15, 30, 0];
-        document.querySelectorAll('#seg-auto-off .m3-seg-btn').forEach((b, i) => b.classList.toggle('active', validMinutes[i] === s.auto_off_minutes));
+        document.querySelectorAll('#seg-auto-off .m3-seg-btn').forEach((b, i) => b.classList.toggle('active', validMinutes[i] === autoOff));
       }
       if (typeof s.volume_limiter === 'boolean') {
         document.getElementById('chk-volume-limiter').checked = s.volume_limiter;
       }
-      if (typeof s.bt_auto_power_on === 'boolean') {
-        document.getElementById('chk-bt-power').checked = s.bt_auto_power_on;
+      const btPower = (typeof s.bt_power_on_default === "boolean") ? s.bt_power_on_default : s.bt_auto_power_on;
+      if (typeof btPower === 'boolean') {
+        document.getElementById('chk-bt-power').checked = btPower;
       }
-      if (s.bt_call_attenuation) {
+      const btCall = s.bt_call_behavior || s.bt_call_attenuation;
+      if (btCall) {
         const list = ['do_nothing', 'attenuate_12db', 'mute_game'];
         document.querySelectorAll('#seg-bt-call .m3-seg-btn').forEach((b, i) => {
-          b.classList.toggle('active', list[i] === s.bt_call_attenuation);
+          b.classList.toggle('active', list[i] === btCall);
         });
       }
     }
