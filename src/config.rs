@@ -61,6 +61,7 @@ pub struct AppConfig {
     pub poll_status_interval_secs: u64,
     pub web_enabled: bool,
     pub web_bind: String,
+    pub tray_enabled: bool,
     pub hardware: HardwareConfig,
 }
 
@@ -76,6 +77,7 @@ impl Default for AppConfig {
             poll_status_interval_secs: 2,
             web_enabled: true,
             web_bind: DEFAULT_WEB_BIND.to_string(),
+            tray_enabled: true,
             hardware: HardwareConfig::default(),
         }
     }
@@ -111,6 +113,8 @@ poll_status_interval_secs = {poll_secs}
 # Embedded HTTP & SSE server for Web UI / API
 web_enabled = {web_enabled}
 web_bind = "{web_bind}"
+# System tray indicator & context menu
+tray_enabled = {tray_enabled}
 
 [hardware]
 # Hardware sidetone (0x39 / 0x0939): level 0 (Off), 1 (Low), 2 (Medium), 3 (High)
@@ -138,6 +142,7 @@ bt_call_behavior = "{bt_call}"
             poll_secs = self.poll_status_interval_secs,
             web_enabled = self.web_enabled,
             web_bind = escape_toml_str(&self.web_bind),
+            tray_enabled = self.tray_enabled,
             sidetone_enabled = self.hardware.sidetone_enabled,
             sidetone_level = self.hardware.sidetone_level.min(MAX_SIDETONE_LEVEL),
             mic_gain = self.hardware.mic_gain.min(MAX_MIC_VOLUME_LEVEL),
@@ -200,6 +205,11 @@ bt_call_behavior = "{bt_call}"
                 "web_enabled" => {
                     if let Some(b) = parse_bool(val) {
                         cfg.web_enabled = b;
+                    }
+                }
+                "tray_enabled" => {
+                    if let Some(b) = parse_bool(val) {
+                        cfg.tray_enabled = b;
                     }
                 }
                 "web_bind" => {
@@ -672,11 +682,13 @@ mod tests {
         assert!(toml_str.contains("active_profile_24g = \"flat\""));
         assert!(toml_str.contains("active_profile_bt = \"harman\""));
         assert!(toml_str.contains("active_profile_mic = \"flat\""));
+        assert!(toml_str.contains("tray_enabled = true"));
 
         let loaded = AppConfig::from_toml_str(&toml_str).expect("Failed to parse config TOML");
         assert_eq!(loaded.active_profile_24g, "flat");
         assert_eq!(loaded.active_profile_bt, "harman");
         assert_eq!(loaded.active_profile_mic, "flat");
+        assert_eq!(loaded.tray_enabled, true);
     }
 
     #[test]

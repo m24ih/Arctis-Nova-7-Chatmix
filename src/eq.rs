@@ -24,6 +24,11 @@ pub enum EqChannel {
 }
 
 impl EqChannel {
+    #[allow(non_upper_case_globals, dead_code)]
+    pub const Channel24G: Self = Self::Speaker24G;
+    #[allow(non_upper_case_globals, dead_code)]
+    pub const Bluetooth: Self = Self::SpeakerBt;
+
     pub fn from_str_lossy(s: &str) -> Self {
         match s.trim().to_ascii_lowercase().as_str() {
             "bt" | "bluetooth" | "speaker_bt" => Self::SpeakerBt,

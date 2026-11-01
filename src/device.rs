@@ -98,6 +98,7 @@ pub(crate) const MAX_SIDETONE_LEVEL: u8 = 3;
 /// Maximum microphone volume level (0..=7, 8 discrete steps matching official Arctis Companion).
 pub const MAX_MIC_VOLUME_LEVEL: u8 = 7;
 /// Backward-compatible alias for `MAX_MIC_VOLUME_LEVEL`.
+#[allow(dead_code)]
 pub const MAX_MIC_GAIN_LEVEL: u8 = MAX_MIC_VOLUME_LEVEL;
 pub(crate) const MAX_MUTE_LED_BRIGHTNESS: u8 = 3;
 pub(crate) const MAX_INACTIVITY_MINUTES: u8 = 90;

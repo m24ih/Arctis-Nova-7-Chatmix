@@ -5,6 +5,7 @@ mod device;
 mod eq;
 mod state;
 mod telemetry;
+mod tray;
 mod usb;
 mod web;
 
@@ -53,6 +54,8 @@ OPTIONS:
     --save-flash                   Persist current settings to headset onboard flash (0x09)
     --web-bind <HOST:PORT>         Override embedded HTTP server bind address (default 127.0.0.1:3927)
     --no-web                       Disable embedded HTTP server
+    --no-tray                      Disable system tray indicator & menu
+    --tray                         Enable system tray indicator & menu
     -h, --help                     Print this help message"
     );
 }
@@ -259,13 +262,24 @@ fn handle_cli_args(args: &[String]) -> Result<bool> {
                 config_modified = true;
                 run_daemon_after = true;
             }
+            "--no-tray" => {
+                cfg.tray_enabled = false;
+                config_modified = true;
+                run_daemon_after = true;
+            }
+            "--tray" => {
+                cfg.tray_enabled = true;
+                config_modified = true;
+                run_daemon_after = true;
+            }
             other => {
                 anyhow::bail!("Unknown argument '{}'. Run with --help for usage.", other);
             }
         }
-        if !matches!(args.get(i).map(String::as_str), Some("--web-bind") | Some("--no-web"))
-            && (i == 0 || !matches!(args.get(i - 1).map(String::as_str), Some("--web-bind")))
-        {
+        if !matches!(
+            args.get(i).map(String::as_str),
+            Some("--web-bind") | Some("--no-web") | Some("--no-tray") | Some("--tray")
+        ) && (i == 0 || !matches!(args.get(i - 1).map(String::as_str), Some("--web-bind"))) {
             saw_oneshot = true;
         }
         i += 1;

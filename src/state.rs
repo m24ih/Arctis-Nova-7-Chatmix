@@ -363,7 +363,8 @@ pub fn config_to_settings_json(config: &AppConfig) -> String {
             "\"auto_apply_on_connect\":{},",
             "\"save_to_flash\":{},",
             "\"poll_status_interval_secs\":{},",
-            "\"web_bind\":\"{}\"",
+            "\"web_bind\":\"{}\",",
+            "\"tray_enabled\":{}",
             "}}"
         ),
         hw.sidetone_enabled,
@@ -381,7 +382,8 @@ pub fn config_to_settings_json(config: &AppConfig) -> String {
         config.auto_apply_on_connect,
         config.save_to_flash,
         config.poll_status_interval_secs,
-        escape_json(&config.web_bind)
+        escape_json(&config.web_bind),
+        config.tray_enabled
     )
 }
 

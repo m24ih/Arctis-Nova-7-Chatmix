@@ -10,4 +10,5 @@ log = "0.4"
 env_logger = "0.10"
 anyhow = "1.0"
 hidapi = "2.6"
+ksni = { version = "0.3", features = ["blocking"] }
 

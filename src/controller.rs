@@ -12,6 +12,7 @@ use crate::device::{
 use crate::eq::{EqChannel, ParametricEqProfile};
 use crate::state::{load_all_presets, DeviceWorker, DeviceWorkerHandle};
 use crate::telemetry::{parse_telemetry_event, ChargingState, HeadsetTelemetry, TelemetryEvent, WirelessState};
+use crate::tray::spawn_system_tray;
 use crate::usb::{rusb_request_status, rusb_send_hid_report, usb_find_and_open};
 use crate::web::spawn_web_server;
 use anyhow::{Context, Result};
@@ -376,6 +377,23 @@ impl ArctisController {
                     "Could not start embedded HTTP server on {}: {}",
                     self.config.web_bind, e
                 );
+            }
+        }
+
+        // 0b. Start system tray indicator & context menu if enabled
+        if self.config.tray_enabled {
+            match spawn_system_tray(
+                self.worker_handle.clone(),
+                self.running.clone(),
+                &self.config.web_bind,
+            ) {
+                Ok(_) => info!("System tray indicator started successfully"),
+                Err(e) => {
+                    warn!(
+                        "Could not start system tray indicator (D-Bus / SNI unavailable?): {}",
+                        e
+                    );
+                }
             }
         }
 
@@ -934,6 +952,8 @@ struct NotifyRecord {
 
 #[cfg(test)]
 static NOTIFY_CAPTURES: std::sync::OnceLock<std::sync::Mutex<Vec<NotifyRecord>>> = std::sync::OnceLock::new();
+#[cfg(test)]
+static NOTIFY_TEST_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
 
 #[cfg(test)]
 fn notify_captures() -> &'static std::sync::Mutex<Vec<NotifyRecord>> {
@@ -980,6 +1000,7 @@ mod tests {
 
     #[test]
     fn test_battery_notification_thresholds() {
+        let _lock = NOTIFY_TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         let mut tracker = BatteryNotificationTracker::default();
 
         // High battery, disconnected (thresholds suppressed)
@@ -1036,6 +1057,7 @@ mod tests {
 
     #[test]
     fn test_battery_notification_charging_state() {
+        let _lock = NOTIFY_TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         clear_notify_captures();
         let mut tracker = BatteryNotificationTracker::default();
 
@@ -1073,6 +1095,7 @@ mod tests {
 
     #[test]
     fn test_wireless_connection_disconnection_notifications_and_resets() {
+        let _lock = NOTIFY_TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         clear_notify_captures();
         let mut tracker = BatteryNotificationTracker::default();
 
@@ -1105,6 +1128,7 @@ mod tests {
 
     #[test]
     fn test_charging_transitions_byte_values_no_false_trigger() {
+        let _lock = NOTIFY_TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         clear_notify_captures();
         let mut tracker = BatteryNotificationTracker::default();
 
@@ -1158,6 +1182,7 @@ mod tests {
 
     #[test]
     fn test_low_battery_thresholds_connected_only_not_charging() {
+        let _lock = NOTIFY_TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
         clear_notify_captures();
         let mut tracker = BatteryNotificationTracker::default();
 
