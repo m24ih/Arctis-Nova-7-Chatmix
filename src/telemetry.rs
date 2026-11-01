@@ -83,13 +83,18 @@ impl ChargingState {
         match raw {
             0 => Self::NotCharging,
             1 => Self::Charging,
-            2 | 3 => Self::Charged,
+            2 => Self::Charged,
+            3 => Self::NotCharging,
             other => Self::Unknown(other),
         }
     }
 
     pub fn is_charging(&self) -> bool {
-        matches!(self, Self::Charging | Self::Charged)
+        matches!(self, Self::Charging)
+    }
+
+    pub fn is_charged(&self) -> bool {
+        matches!(self, Self::Charged)
     }
 }
 
