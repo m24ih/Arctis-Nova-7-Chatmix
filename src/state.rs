@@ -6,11 +6,12 @@
 
 use crate::config::{AppConfig, ConfigManager, HardwareConfig};
 use crate::device::{
-    build_bt_call_behavior_report, build_bt_power_default_report, build_inactivity_timer_report,
-    build_mic_gain_report, build_mute_led_brightness_report, build_save_to_flash_report,
+    build_bt_call_behavior_report, build_bt_power_default_report, build_eq_name_query_report,
+    build_general_settings_request_report, build_inactivity_timer_report,
+    build_mic_volume_report, build_mute_led_brightness_report, build_save_to_flash_report,
     build_sidetone_level_report, build_sidetone_report, build_status_request_report,
     build_volume_limiter_report, sidetone_bucket, BtCallBehavior, HID_MSG_SIZE,
-    MAX_INACTIVITY_MINUTES, MAX_MIC_GAIN_LEVEL, MAX_MUTE_LED_BRIGHTNESS, MAX_SIDETONE_LEVEL,
+    MAX_INACTIVITY_MINUTES, MAX_MIC_VOLUME_LEVEL, MAX_MUTE_LED_BRIGHTNESS, MAX_SIDETONE_LEVEL,
     MAX_VOLUME_PERCENT,
 };
 use crate::eq::{EqChannel, ParametricEqProfile};
@@ -688,10 +689,10 @@ impl DeviceWorker {
                         }
 
                         if let Some(gain) = patch.mic_gain {
-                            let clamped = gain.min(MAX_MIC_GAIN_LEVEL);
+                            let clamped = gain.min(MAX_MIC_VOLUME_LEVEL);
                             st.config.hardware.mic_gain = clamped;
                             st.telemetry.mic_gain = Some(clamped);
-                            reports.push(build_mic_gain_report(clamped));
+                            reports.push(build_mic_volume_report(clamped));
                         }
 
                         if let Some(limiter) = patch.volume_limiter {
@@ -772,10 +773,17 @@ impl DeviceWorker {
                             st.telemetry.apply_event(&event);
                             st.touch();
                         }
-                        return Ok(());
                     }
-                    let req = build_status_request_report();
-                    send_report_serialized(&req, usb_handle)
+                    let req_b0 = build_status_request_report();
+                    let req_11 = build_general_settings_request_report();
+                    let req_a6_0 = build_eq_name_query_report(0);
+                    let req_a6_1 = build_eq_name_query_report(1);
+                    let req_a6_2 = build_eq_name_query_report(2);
+                    send_reports_if_connected(
+                        &[req_b0, req_11, req_a6_0, req_a6_1, req_a6_2],
+                        usb_handle,
+                        false,
+                    )
                 })();
                 self.handle.broadcast_state("telemetry");
                 let _ = reply.send(res);

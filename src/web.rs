@@ -14,7 +14,7 @@
 // - `POST /api/save-flash` -> Persist active DSP & hardware settings to onboard flash (`0x09`)
 // - `GET  /api/events`     -> Server-Sent Events (SSE) stream for live telemetry & ChatMix updates
 
-use crate::device::BtCallBehavior;
+use crate::device::{BtCallBehavior, MAX_MIC_VOLUME_LEVEL};
 use crate::eq::{
     EqBand, EqChannel, EqFilterType, ParametricEqProfile, DEFAULT_Q_FACTOR, EQ_BAND_COUNT,
     EQ_FREQUENCIES_HZ, MAX_EQ_GAIN_DB, MIN_EQ_GAIN_DB,
@@ -498,7 +498,9 @@ fn handle_post_settings(
     let patch = HardwareSettingsPatch {
         sidetone_enabled: extract_json_bool(body, "sidetone_enabled"),
         sidetone_level: extract_json_u64(body, "sidetone_level").map(|v| v.min(3) as u8),
-        mic_gain: extract_json_u64(body, "mic_gain").map(|v| v.min(15) as u8),
+        mic_gain: extract_json_u64(body, "mic_gain")
+            .or_else(|| extract_json_u64(body, "mic_volume"))
+            .map(|v| v.min(MAX_MIC_VOLUME_LEVEL as u64) as u8),
         volume_limiter: extract_json_bool(body, "volume_limiter"),
         inactivity_timer_mins: extract_json_u64(body, "inactivity_timer_mins")
             .or_else(|| extract_json_u64(body, "sleep_timer_mins"))

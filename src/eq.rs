@@ -292,10 +292,30 @@ impl ParametricEqProfile {
         )
     }
 
+    /// Balanced preset matching official Arctis Companion Balanced profile.
+    pub fn balanced() -> Self {
+        Self::from_gains(
+            "balanced",
+            "Official Arctis Nova balanced natural and smooth audio profile",
+            [1.0, 1.0, 0.5, 0.0, 0.0, 0.0, 0.5, 1.0, 1.0, 0.5],
+        )
+    }
+
+    /// Deadlock competitive game preset matching official Arctis Companion Deadlock profile.
+    pub fn deadlock() -> Self {
+        Self::from_gains(
+            "deadlock",
+            "Valve Deadlock competitive shooter preset: ability cues and footstep clarity",
+            [-2.0, -1.0, 0.0, 1.0, 2.0, 3.0, 3.5, 2.5, 1.0, 0.0],
+        )
+    }
+
     pub fn builtin_presets() -> Vec<Self> {
         vec![
             Self::flat(),
+            Self::balanced(),
             Self::harman(),
+            Self::deadlock(),
             Self::fps(),
             Self::cs2(),
             Self::valorant(),
@@ -311,6 +331,8 @@ impl ParametricEqProfile {
     pub fn builtin_by_name(name: &str) -> Option<Self> {
         match name.trim().to_ascii_lowercase().as_str() {
             "flat" | "default" => Some(Self::flat()),
+            "balanced" | "balance" => Some(Self::balanced()),
+            "deadlock" => Some(Self::deadlock()),
             "harman" | "music" | "audiophile" => Some(Self::harman()),
             "fps" | "footsteps" | "competitive" => Some(Self::fps()),
             "cs2" | "counter-strike" | "csgo" => Some(Self::cs2()),

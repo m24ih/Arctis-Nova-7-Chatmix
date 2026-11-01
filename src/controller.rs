@@ -4,13 +4,15 @@ use crate::audio::{
 };
 use crate::config::{AppConfig, ConfigManager};
 use crate::device::{
-    is_percentage_battery_device, parse_chatmix_report, CHAT_SINK_DESC, CHAT_SINK_NAME,
-    FALLBACK_DEFAULT_SINK, GAME_SINK_DESC, GAME_SINK_NAME, HID_MSG_SIZE, VENDOR_ID,
+    build_eq_name_query_report, build_gaia_notification_register_report,
+    build_general_settings_request_report, is_percentage_battery_device, parse_chatmix_report,
+    CHAT_SINK_DESC, CHAT_SINK_NAME, FALLBACK_DEFAULT_SINK, GAME_SINK_DESC, GAME_SINK_NAME,
+    HID_MSG_SIZE, VENDOR_ID,
 };
-use crate::eq::ParametricEqProfile;
+use crate::eq::{EqChannel, ParametricEqProfile};
 use crate::state::{load_all_presets, DeviceWorker, DeviceWorkerHandle};
-use crate::telemetry::{parse_telemetry_event, HeadsetTelemetry, TelemetryEvent, WirelessState, ChargingState};
-use crate::usb::{rusb_request_status, usb_find_and_open};
+use crate::telemetry::{parse_telemetry_event, ChargingState, HeadsetTelemetry, TelemetryEvent, WirelessState};
+use crate::usb::{rusb_request_status, rusb_send_hid_report, usb_find_and_open};
 use crate::web::spawn_web_server;
 use anyhow::{Context, Result};
 use log::{debug, error, info, warn};
@@ -508,8 +510,24 @@ impl ArctisController {
                         info!("Moved active audio streams to {}", GAME_SINK_NAME);
                     }
 
-                    // Query initial general status (0xB0)
+                    // Register Qualcomm GAIA v3 event notifications (0x4001) for live hardware sync
+                    for &sync_opcode in &[0x37, 0x39, 0x3A, 0xA3, 0xAE, 0xB2, 0xB3, 0xA6] {
+                        let reg = build_gaia_notification_register_report(sync_opcode);
+                        let _ = rusb_send_hid_report(&handle, interface_num, &reg);
+                        std::thread::sleep(Duration::from_millis(5));
+                    }
+
+                    // Query initial general status (0xB0), general settings (0x11), and EQ preset names (0xA6)
                     let _ = rusb_request_status(&handle, interface_num);
+                    std::thread::sleep(Duration::from_millis(15));
+                    let gen_req = build_general_settings_request_report();
+                    let _ = rusb_send_hid_report(&handle, interface_num, &gen_req);
+
+                    for ch in 0..=2 {
+                        std::thread::sleep(Duration::from_millis(15));
+                        let eq_req = build_eq_name_query_report(ch);
+                        let _ = rusb_send_hid_report(&handle, interface_num, &eq_req);
+                    }
 
                     // Read Loop
                     let res = self.read_loop(
@@ -612,9 +630,17 @@ impl ArctisController {
                     }
                 } else {
                     let _ = rusb_request_status(handle, interface_num);
-                    // Broadcast heartbeat on explicit status poll
-                    self.sync_telemetry_to_shared_state(&telemetry, "telemetry");
                 }
+
+                // Query general settings (0x11) and EQ preset names (0xA6) on periodic status poll
+                let req_gen = build_general_settings_request_report();
+                let _ = rusb_send_hid_report(handle, interface_num, &req_gen);
+                for ch in 0..=2 {
+                    let req_eq = build_eq_name_query_report(ch);
+                    let _ = rusb_send_hid_report(handle, interface_num, &req_eq);
+                }
+
+                self.sync_telemetry_to_shared_state(&telemetry, "telemetry");
                 last_status_poll = Instant::now();
             }
 
@@ -639,41 +665,72 @@ impl ArctisController {
                     }
 
                     if let Some(event) = parse_telemetry_event(slice, is_percentage_device) {
-                        // Also apply ChatMix volumes if included in a 0xB0 GeneralStatus snapshot
-                        if let TelemetryEvent::GeneralStatus(report) = event {
-                            if let (Some(game_vol), Some(chat_vol)) =
-                                (report.game_volume, report.chat_volume)
-                            {
-                                if volume_state.should_apply_game(game_vol) {
-                                    let game_ok = set_sink_volume(GAME_SINK_NAME, game_vol);
-                                    volume_state.record_game(game_vol, game_ok);
-                                }
-                                if volume_state.should_apply_chat(chat_vol) {
-                                    let chat_ok = set_sink_volume(CHAT_SINK_NAME, chat_vol);
-                                    volume_state.record_chat(chat_vol, chat_ok);
-                                }
+                        match &event {
+                            TelemetryEvent::EqPresetName { channel_id, name, .. } => {
+                                let target_ch = match channel_id {
+                                    Some(1) => EqChannel::SpeakerBt,
+                                    Some(2) => EqChannel::Microphone,
+                                    _ => EqChannel::Speaker24G,
+                                };
+                                self.handle_eq_preset_name_sync(target_ch, name);
                             }
-                        }
-
-                        let changed = telemetry.apply_event(&event);
-                        battery_tracker.check_and_notify(&telemetry);
-                        let event_name = match event {
-                            TelemetryEvent::ChatMix { .. } => "chatmix",
-                            TelemetryEvent::GeneralStatus(_) => "telemetry",
-                            _ => "telemetry",
-                        };
-                        if changed || matches!(event, TelemetryEvent::ChatMix { .. } | TelemetryEvent::GeneralStatus(_)) {
-                            if changed {
-                                match event {
-                                    TelemetryEvent::ChatMix { .. } => {
-                                        debug!("Telemetry ChatMix: {}", telemetry.summary_line());
+                            TelemetryEvent::GeneralSettings(report) => {
+                                if let (Some(game_vol), Some(chat_vol)) =
+                                    (report.game_volume, report.chat_volume)
+                                {
+                                    if volume_state.should_apply_game(game_vol) {
+                                        let game_ok = set_sink_volume(GAME_SINK_NAME, game_vol);
+                                        volume_state.record_game(game_vol, game_ok);
                                     }
-                                    _ => {
-                                        info!("Headset Telemetry: {}", telemetry.summary_line());
+                                    if volume_state.should_apply_chat(chat_vol) {
+                                        let chat_ok = set_sink_volume(CHAT_SINK_NAME, chat_vol);
+                                        volume_state.record_chat(chat_vol, chat_ok);
                                     }
                                 }
+                                let changed = telemetry.apply_event(&event);
+                                battery_tracker.check_and_notify(&telemetry);
+                                if changed {
+                                    info!("Headset General Settings: {}", telemetry.summary_line());
+                                }
+                                self.sync_telemetry_to_shared_state(&telemetry, "settings");
+                                self.sync_telemetry_to_shared_state(&telemetry, "telemetry");
                             }
-                            self.sync_telemetry_to_shared_state(&telemetry, event_name);
+                            TelemetryEvent::GeneralStatus(report) => {
+                                if let (Some(game_vol), Some(chat_vol)) =
+                                    (report.game_volume, report.chat_volume)
+                                {
+                                    if volume_state.should_apply_game(game_vol) {
+                                        let game_ok = set_sink_volume(GAME_SINK_NAME, game_vol);
+                                        volume_state.record_game(game_vol, game_ok);
+                                    }
+                                    if volume_state.should_apply_chat(chat_vol) {
+                                        let chat_ok = set_sink_volume(CHAT_SINK_NAME, chat_vol);
+                                        volume_state.record_chat(chat_vol, chat_ok);
+                                    }
+                                }
+                                let changed = telemetry.apply_event(&event);
+                                battery_tracker.check_and_notify(&telemetry);
+                                if changed {
+                                    info!("Headset Telemetry: {}", telemetry.summary_line());
+                                }
+                                self.sync_telemetry_to_shared_state(&telemetry, "telemetry");
+                            }
+                            TelemetryEvent::ChatMix { .. } => {
+                                let changed = telemetry.apply_event(&event);
+                                if changed {
+                                    debug!("Telemetry ChatMix: {}", telemetry.summary_line());
+                                }
+                                self.sync_telemetry_to_shared_state(&telemetry, "chatmix");
+                            }
+                            _ => {
+                                let changed = telemetry.apply_event(&event);
+                                battery_tracker.check_and_notify(&telemetry);
+                                if changed {
+                                    info!("Headset Hardware Sync: {:?}", event);
+                                }
+                                self.sync_telemetry_to_shared_state(&telemetry, "settings");
+                                self.sync_telemetry_to_shared_state(&telemetry, "telemetry");
+                            }
                         }
                     }
                 }
@@ -744,6 +801,68 @@ impl ArctisController {
             st.touch();
         }
         self.worker_handle.broadcast_state(sse_event_name);
+    }
+
+    fn handle_eq_preset_name_sync(&self, channel: EqChannel, name: &str) {
+        let clean_name = name.trim();
+        if clean_name.is_empty() {
+            return;
+        }
+
+        let matched_profile = self
+            .config_manager
+            .load_profile(clean_name)
+            .ok()
+            .or_else(|| ParametricEqProfile::builtin_by_name(clean_name));
+
+        if let Ok(mut st) = self.worker_handle.state.write() {
+            let mut changed = false;
+            match channel {
+                EqChannel::Speaker24G => {
+                    if !st.config.active_profile_24g.eq_ignore_ascii_case(clean_name) {
+                        st.config.active_profile_24g = clean_name.to_string();
+                        st.config.active_profile = clean_name.to_string();
+                        changed = true;
+                    }
+                    if let Some(ref prof) = matched_profile {
+                        st.active_eq_24g = prof.clone();
+                        st.active_eq = prof.clone();
+                        changed = true;
+                    }
+                }
+                EqChannel::SpeakerBt => {
+                    if !st.config.active_profile_bt.eq_ignore_ascii_case(clean_name) {
+                        st.config.active_profile_bt = clean_name.to_string();
+                        changed = true;
+                    }
+                    if let Some(ref prof) = matched_profile {
+                        st.active_eq_bt = prof.clone();
+                        changed = true;
+                    }
+                }
+                EqChannel::Microphone => {
+                    if !st.config.active_profile_mic.eq_ignore_ascii_case(clean_name) {
+                        st.config.active_profile_mic = clean_name.to_string();
+                        changed = true;
+                    }
+                    if let Some(ref prof) = matched_profile {
+                        st.active_eq_mic = prof.clone();
+                        changed = true;
+                    }
+                }
+            }
+            if changed {
+                let _ = self.config_manager.save_config(&st.config);
+                st.touch();
+                info!(
+                    "Synchronized hardware EQ preset for {}: '{}'",
+                    channel.as_str(),
+                    clean_name
+                );
+            }
+        }
+        self.worker_handle.broadcast_state("eq");
+        self.worker_handle.broadcast_state("telemetry");
     }
 
     fn relink_virtual_sinks_with_retry(&self) -> Result<()> {

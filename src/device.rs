@@ -44,6 +44,7 @@ pub(crate) const HID_CLASS_CODE: u8 = 3;
 
 // --- USB HID Opcodes (and Sync Event Opcodes) ---
 pub(crate) const SAVE_TO_FLASH_OPCODE: u8 = 0x09;
+pub(crate) const GENERAL_SETTINGS_OPCODE: u8 = 0x11;
 #[allow(dead_code)]
 pub(crate) const EQ_OPCODE: u8 = 0x33;
 pub(crate) const EQ_24G_OPCODE: u8 = 0x33;
@@ -55,6 +56,7 @@ pub(crate) const VOLUME_LIMITER_OPCODE: u8 = 0x3A;
 pub(crate) const CHATMIX_OPCODE: u8 = 0x45;
 pub(crate) const MIC_MUTE_OPCODE: u8 = 0x52;
 pub(crate) const INACTIVITY_TIMER_OPCODE: u8 = 0xA3;
+pub(crate) const GET_EQ_NAME_OPCODE: u8 = 0xA6;
 pub(crate) const MUTE_LED_OPCODE: u8 = 0xAE;
 pub(crate) const STATUS_OPCODE: u8 = 0xB0;
 pub(crate) const BT_POWER_DEFAULT_OPCODE: u8 = 0xB2;
@@ -63,9 +65,11 @@ pub(crate) const BATTERY_LEVEL_OPCODE: u8 = 0xB7;
 pub(crate) const WIRELESS_STATUS_OPCODE: u8 = 0xB9;
 pub(crate) const CHARGING_STATUS_OPCODE: u8 = 0xBB;
 
-// --- Bluetooth GAIA v3 Set Command IDs (0x09XX mirrors USB HID opcode 0xXX) ---
+// --- Bluetooth GAIA v3 Command IDs (0x09XX mirrors USB HID opcode 0xXX) ---
 #[allow(dead_code)]
 pub(crate) const GAIA_VENDOR_STEELSERIES: u16 = 0x001D;
+#[allow(dead_code)]
+pub(crate) const GAIA_GENERAL_SETTINGS_CMD: u16 = 0x0911;
 #[allow(dead_code)]
 pub(crate) const GAIA_SET_EQ_CMD: u16 = 0x0933;
 #[allow(dead_code)]
@@ -77,15 +81,24 @@ pub(crate) const GAIA_SET_VOLUME_LIMITER_CMD: u16 = 0x093A;
 #[allow(dead_code)]
 pub(crate) const GAIA_SET_INACTIVITY_TIMER_CMD: u16 = 0x09A3;
 #[allow(dead_code)]
+pub(crate) const GAIA_GET_EQ_NAME_CMD: u16 = 0x09A6;
+#[allow(dead_code)]
 pub(crate) const GAIA_SET_MUTE_LED_CMD: u16 = 0x09AE;
 #[allow(dead_code)]
 pub(crate) const GAIA_SET_BT_POWER_DEFAULT_CMD: u16 = 0x09B2;
 #[allow(dead_code)]
 pub(crate) const GAIA_SET_BT_CALL_BEHAVIOR_CMD: u16 = 0x09B3;
+#[allow(dead_code)]
+pub(crate) const GAIA_REGISTER_NOTIFICATION_CMD: u16 = 0x4001;
+#[allow(dead_code)]
+pub(crate) const GAIA_EVENT_NOTIFICATION_CMD: u16 = 0x4003;
 
 pub(crate) const MAX_VOLUME_PERCENT: u8 = 100;
 pub(crate) const MAX_SIDETONE_LEVEL: u8 = 3;
-pub(crate) const MAX_MIC_GAIN_LEVEL: u8 = 15;
+/// Maximum microphone volume level (0..=7, 8 discrete steps matching official Arctis Companion).
+pub const MAX_MIC_VOLUME_LEVEL: u8 = 7;
+/// Backward-compatible alias for `MAX_MIC_VOLUME_LEVEL`.
+pub const MAX_MIC_GAIN_LEVEL: u8 = MAX_MIC_VOLUME_LEVEL;
 pub(crate) const MAX_MUTE_LED_BRIGHTNESS: u8 = 3;
 pub(crate) const MAX_INACTIVITY_MINUTES: u8 = 90;
 
@@ -198,11 +211,11 @@ pub(crate) fn sidetone_bucket(percent: u8) -> u8 {
     }
 }
 
-/// Maps a percentage (`0..=100`) to the 16-step hardware microphone gain level (`0x00..=0x0F`).
+/// Maps a percentage (`0..=100`) to the 8-step hardware microphone volume level (`0x00..=0x07`).
 #[allow(dead_code)]
 pub(crate) fn mic_gain_from_percent(percent: u8) -> u8 {
     let clamped = percent.min(MAX_VOLUME_PERCENT) as u16;
-    ((clamped * MAX_MIC_GAIN_LEVEL as u16 + 50) / 100) as u8
+    ((clamped * MAX_MIC_VOLUME_LEVEL as u16 + 50) / 100) as u8
 }
 
 /// Builds a 64-byte USB HID report with `[0x00, opcode, payload...]`.
@@ -227,9 +240,40 @@ pub(crate) fn build_gaia_command(command_id: u16, payload: &[u8]) -> Vec<u8> {
     frame
 }
 
+/// Builds a 64-byte USB HID report wrapping a Qualcomm GAIA v3 command frame.
+#[allow(dead_code)]
+pub(crate) fn build_gaia_report(command_id: u16, payload: &[u8]) -> [u8; HID_MSG_SIZE] {
+    let mut data = [0u8; HID_MSG_SIZE];
+    data[0] = 0x00;
+    data[1] = (GAIA_VENDOR_STEELSERIES >> 8) as u8;
+    data[2] = (GAIA_VENDOR_STEELSERIES & 0xFF) as u8;
+    data[3] = (command_id >> 8) as u8;
+    data[4] = (command_id & 0xFF) as u8;
+    let copy_len = payload.len().min(HID_MSG_SIZE - 5);
+    data[5..5 + copy_len].copy_from_slice(&payload[..copy_len]);
+    data
+}
+
+/// Builds a GAIA notification registration report (`0x4001`) for a feature opcode.
+#[allow(dead_code)]
+pub(crate) fn build_gaia_notification_register_report(event_opcode: u8) -> [u8; HID_MSG_SIZE] {
+    build_gaia_report(GAIA_REGISTER_NOTIFICATION_CMD, &[event_opcode])
+}
+
 /// Builds the 64-byte HID report for querying general headset status & battery (`0xB0`).
 pub(crate) fn build_status_request_report() -> [u8; HID_MSG_SIZE] {
     build_hid_command_report(STATUS_OPCODE, &[])
+}
+
+/// Builds the 64-byte HID report for querying general headset settings & live status (`0x11` / `0x0911`).
+pub(crate) fn build_general_settings_request_report() -> [u8; HID_MSG_SIZE] {
+    build_hid_command_report(GENERAL_SETTINGS_OPCODE, &[])
+}
+
+/// Builds the 64-byte HID report for querying the active EQ preset name for a channel (`0xA6` / `0x09A6`).
+/// - `channel_id`: 0 = 2.4G (`SPEAKER_24GHZ`), 1 = Bluetooth (`SPEAKER_BT`), 2 = Microphone (`MIC`).
+pub(crate) fn build_eq_name_query_report(channel_id: u8) -> [u8; HID_MSG_SIZE] {
+    build_hid_command_report(GET_EQ_NAME_OPCODE, &[channel_id, 0x00])
 }
 
 /// Builds the 64-byte HID report for persisting current DSP/hardware settings to onboard flash (`0x09`).
@@ -248,9 +292,15 @@ pub(crate) fn build_sidetone_level_report(level: u8) -> [u8; HID_MSG_SIZE] {
     build_hid_command_report(SIDETONE_OPCODE, &[level.min(MAX_SIDETONE_LEVEL)])
 }
 
-/// Builds the 64-byte HID report for setting microphone gain (`0..=15`, `0x37` / `0x0937`).
+/// Builds the 64-byte HID report for setting microphone volume (`0..=7`, `0x37` / `0x0937`).
+pub(crate) fn build_mic_volume_report(level: u8) -> [u8; HID_MSG_SIZE] {
+    build_hid_command_report(MIC_GAIN_OPCODE, &[level.min(MAX_MIC_VOLUME_LEVEL)])
+}
+
+/// Builds the 64-byte HID report for setting microphone gain / volume (`0..=7`, `0x37` / `0x0937`).
+/// Backward-compatible alias for `build_mic_volume_report`.
 pub(crate) fn build_mic_gain_report(level: u8) -> [u8; HID_MSG_SIZE] {
-    build_hid_command_report(MIC_GAIN_OPCODE, &[level.min(MAX_MIC_GAIN_LEVEL)])
+    build_mic_volume_report(level)
 }
 
 /// Builds the 64-byte HID report for toggling the hardware volume limiter (`0x3A` / `0x093A`).
@@ -377,5 +427,48 @@ mod tests {
         assert_eq!(parse_chatmix_report(&[0x45]), None);
         assert_eq!(parse_chatmix_report(&[0x45, 100]), None);
         assert_eq!(parse_chatmix_report(&[0x44, 100, 100]), None);
+    }
+
+    #[test]
+    fn test_mic_volume_report_clamped() {
+        assert_eq!(MAX_MIC_VOLUME_LEVEL, 7);
+        assert_eq!(MAX_MIC_GAIN_LEVEL, 7);
+
+        let r0 = build_mic_volume_report(0);
+        assert_eq!(r0[1], MIC_GAIN_OPCODE);
+        assert_eq!(r0[2], 0);
+
+        let r5 = build_mic_volume_report(5);
+        assert_eq!(r5[2], 5);
+
+        let r7 = build_mic_volume_report(7);
+        assert_eq!(r7[2], 7);
+
+        let r_over = build_mic_volume_report(15);
+        assert_eq!(r_over[2], 7);
+
+        // Alias check
+        assert_eq!(build_mic_gain_report(12)[2], 7);
+    }
+
+    #[test]
+    fn test_general_settings_and_eq_query_reports() {
+        let gen = build_general_settings_request_report();
+        assert_eq!(gen[0], 0x00);
+        assert_eq!(gen[1], GENERAL_SETTINGS_OPCODE);
+        assert_eq!(GENERAL_SETTINGS_OPCODE, 0x11);
+
+        let eq_24g = build_eq_name_query_report(0);
+        assert_eq!(eq_24g[1], GET_EQ_NAME_OPCODE);
+        assert_eq!(eq_24g[2], 0);
+        assert_eq!(eq_24g[3], 0);
+
+        let eq_bt = build_eq_name_query_report(1);
+        assert_eq!(eq_bt[1], 0xA6);
+        assert_eq!(eq_bt[2], 1);
+
+        let eq_mic = build_eq_name_query_report(2);
+        assert_eq!(eq_mic[1], 0xA6);
+        assert_eq!(eq_mic[2], 2);
     }
 }

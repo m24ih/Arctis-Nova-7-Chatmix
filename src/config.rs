@@ -5,7 +5,7 @@
 // - `$XDG_CONFIG_HOME/arctis-nova-7/profiles/*.toml` (`flat.toml`, `harman.toml`, `fps.toml`, ...)
 
 use crate::device::{
-    BtCallBehavior, MAX_INACTIVITY_MINUTES, MAX_MIC_GAIN_LEVEL, MAX_MUTE_LED_BRIGHTNESS,
+    BtCallBehavior, MAX_INACTIVITY_MINUTES, MAX_MIC_VOLUME_LEVEL, MAX_MUTE_LED_BRIGHTNESS,
     MAX_SIDETONE_LEVEL,
 };
 use crate::eq::{
@@ -38,7 +38,7 @@ impl Default for HardwareConfig {
         Self {
             sidetone_enabled: true,
             sidetone_level: 0,
-            mic_gain: 12, // ~75% prevents analog clipping on ClearCast Gen 2
+            mic_gain: MAX_MIC_VOLUME_LEVEL, // Max volume (0..=7, 8 steps matching Arctis Companion)
             volume_limiter: false,
             inactivity_timer_mins: 30,
             mute_led_brightness: 2,
@@ -116,7 +116,7 @@ web_bind = "{web_bind}"
 # Hardware sidetone (0x39 / 0x0939): level 0 (Off), 1 (Low), 2 (Medium), 3 (High)
 sidetone_enabled = {sidetone_enabled}
 sidetone_level = {sidetone_level}
-# Microphone gain (0x37 / 0x0937): 0..=15 (12 = ~75%)
+# Microphone volume (0x37 / 0x0937): 0..=7 (default 7)
 mic_gain = {mic_gain}
 # EU Volume Limiter (0x3A / 0x093A): true or false
 volume_limiter = {volume_limiter}
@@ -140,7 +140,7 @@ bt_call_behavior = "{bt_call}"
             web_bind = escape_toml_str(&self.web_bind),
             sidetone_enabled = self.hardware.sidetone_enabled,
             sidetone_level = self.hardware.sidetone_level.min(MAX_SIDETONE_LEVEL),
-            mic_gain = self.hardware.mic_gain.min(MAX_MIC_GAIN_LEVEL),
+            mic_gain = self.hardware.mic_gain.min(MAX_MIC_VOLUME_LEVEL),
             volume_limiter = self.hardware.volume_limiter,
             inactivity_mins = self.hardware.inactivity_timer_mins.min(MAX_INACTIVITY_MINUTES),
             mute_led = self.hardware.mute_led_brightness.min(MAX_MUTE_LED_BRIGHTNESS),
@@ -230,9 +230,9 @@ bt_call_behavior = "{bt_call}"
                         cfg.hardware.sidetone_level = n.min(MAX_SIDETONE_LEVEL);
                     }
                 }
-                "mic_gain" => {
+                "mic_gain" | "mic_volume" => {
                     if let Ok(n) = val.parse::<u8>() {
-                        cfg.hardware.mic_gain = n.min(MAX_MIC_GAIN_LEVEL);
+                        cfg.hardware.mic_gain = n.min(MAX_MIC_VOLUME_LEVEL);
                     }
                 }
                 "volume_limiter" => {
