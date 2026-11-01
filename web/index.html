@@ -325,7 +325,9 @@ body {
   border-radius: var(--md-shape-corner-full);
   background-color: var(--md-sys-color-surface-container-highest);
   outline: none;
-  cursor: pointer;
+  cursor: default;
+  pointer-events: none;
+  user-select: none;
 }
 
 .chatmix-range::-webkit-slider-thumb {
@@ -337,13 +339,8 @@ body {
   background-color: var(--md-sys-color-primary);
   border: 4px solid var(--md-sys-color-surface-container);
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
-  cursor: grab;
+  cursor: default;
   transition: transform 0.1s ease;
-}
-
-.chatmix-range::-webkit-slider-thumb:active {
-  transform: scale(1.15);
-  cursor: grabbing;
 }
 
 .chatmix-range::-moz-range-thumb {
@@ -353,7 +350,7 @@ body {
   background-color: var(--md-sys-color-primary);
   border: 4px solid var(--md-sys-color-surface-container);
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
-  cursor: grab;
+  cursor: default;
 }
 
 .chatmix-scale {
@@ -363,13 +360,6 @@ body {
   font-size: 0.8125rem;
   color: var(--md-sys-color-on-surface-variant);
   font-weight: 500;
-}
-
-.chatmix-quick-chips {
-  display: flex;
-  gap: 0.5rem;
-  margin-top: 1.25rem;
-  flex-wrap: wrap;
 }
 
 /* EQ Canvas & Preset Chips */
@@ -850,9 +840,9 @@ pre.diag-json {
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/>
           </svg>
-          <span>ChatMix Crossfader</span>
+          <span>ChatMix Donanım Göstergesi</span>
         </h2>
-        <p>Oyun ve sesli sohbet ses kanalları arasındaki donanımsal dengeyi ayarlar</p>
+        <p>Kulaklık üzerindeki fiziksel tekerleğin anlık donanımsal dengesini gösterir (salt okunur)</p>
       </div>
       <div class="m3-pill" id="pill-chatmix-bias">Dengeli</div>
     </div>
@@ -882,7 +872,7 @@ pre.diag-json {
 
     <div class="chatmix-slider-container">
       <div class="chatmix-slider-track-wrap">
-        <input type="range" class="chatmix-range" id="chatmix-slider" min="-100" max="100" value="0" step="1" aria-label="ChatMix Denge Sürgüsü" oninput="onChatmixSliderInput(this.value)" />
+        <input type="range" class="chatmix-range" id="chatmix-slider" min="-100" max="100" value="0" step="1" disabled tabindex="-1" aria-label="ChatMix Fiziksel Denge Göstergesi" />
       </div>
       <div class="chatmix-scale">
         <span>🎮 Oyun %100</span>
@@ -891,11 +881,6 @@ pre.diag-json {
       </div>
     </div>
 
-    <div class="chatmix-quick-chips">
-      <button type="button" class="m3-filter-chip" onclick="setQuickChatmix(-70)">🎮 Oyun Ağırlıklı (%70 / %30)</button>
-      <button type="button" class="m3-filter-chip" onclick="setQuickChatmix(0)">⚖️ Tam Dengeli (%100 / %100)</button>
-      <button type="button" class="m3-filter-chip" onclick="setQuickChatmix(70)">💬 Sohbet Ağırlıklı (%30 / %70)</button>
-    </div>
   </section>
 
   <!-- Card 2: 10-Band Parametric EQ -->
@@ -1432,23 +1417,6 @@ pre.diag-json {
 
   window.addEventListener('resize', drawEqCurve);
 
-  // --- ChatMix Crossfader Handling ---
-  window.onChatmixSliderInput = function(val) {
-    const balance = parseInt(val, 10) || 0;
-    fetch('/api/chatmix', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ balance: balance })
-    }).catch(_ => {});
-  };
-
-  window.setQuickChatmix = function(val) {
-    const slider = document.getElementById('chatmix-slider');
-    if (slider) {
-      slider.value = String(val);
-      window.onChatmixSliderInput(val);
-    }
-  };
 
   function updateChatmixUi(game, chat) {
     if (typeof game !== 'number') game = 100;
@@ -1471,7 +1439,7 @@ pre.diag-json {
     }
 
     const slider = document.getElementById('chatmix-slider');
-    if (slider && document.activeElement !== slider) {
+    if (slider) {
       slider.value = Math.round(chat - game);
     }
   }
